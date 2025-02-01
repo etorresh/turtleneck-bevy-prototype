@@ -1,5 +1,6 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use crate::components::camera::CameraFocus;
 
 pub struct WorldPlugin;
 
@@ -41,12 +42,21 @@ fn spawn_cube(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // cube
+    // cube dynamic
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
         MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
         Transform::from_xyz(2.5, 0.0, 0.25),
         Collider::rectangle(0.5, 0.5),
         RigidBody::Dynamic,
+    ));
+
+    // cube static
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
+        MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
+        Transform::from_xyz(-2.5, 0.0, 0.25),
+        Collider::rectangle(0.5, 0.5),
+        RigidBody::Static,
     ));
 }

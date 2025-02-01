@@ -1,7 +1,9 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
+mod components;
 mod plugins;
+
 use plugins::{camera::CameraPlugin, player::PlayerPlugin, world::WorldPlugin};
 fn main() {
     App::new()
