@@ -49,7 +49,6 @@ fn spawn_cube(
         Transform::from_xyz(2.5, 0.0, 0.25),
         Collider::rectangle(0.5, 0.5),
         RigidBody::Dynamic,
-        CollisionLayers::new(LayerMask(0b0010), LayerMask::ALL),
         TransformInterpolation
     ));
 
@@ -58,6 +57,22 @@ fn spawn_cube(
         Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
         MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
         Transform::from_xyz(-2.5, 0.0, 0.25),
+        Collider::rectangle(0.5, 0.5),
+        RigidBody::Static,
+    ));
+    // cube static
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
+        MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
+        Transform::from_xyz(-3.0, 0.0, 0.25),
+        Collider::rectangle(0.5, 0.5),
+        RigidBody::Static,
+    ));
+        // cube static
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
+        MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
+        Transform::from_xyz(-3.0, 0.5, 0.25),
         Collider::rectangle(0.5, 0.5),
         RigidBody::Static,
     ));

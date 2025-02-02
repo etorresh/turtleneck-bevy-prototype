@@ -15,9 +15,7 @@ struct Speed(f32);
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_player)
-            .add_systems(Update, move_player)
-            // .add_systems(Update, step_physics_if_needed.run_if(force_physics).after(move_player))
-            .insert_resource(ShouldStepPhysics(false));
+            .add_systems(Update, move_player);
     }
 }
 
@@ -45,7 +43,6 @@ fn move_player(
     mut cast_query: Query<(&RigidBody, &mut LinearVelocity)>,
     spatial_query: SpatialQuery,
     mut physics_time: ResMut<Time<Physics>>,
-    mut force_physics: ResMut<ShouldStepPhysics>
 ) {
     let (mut player_transform, player_speed, player_collider, player_entity) = query.single_mut();
 
@@ -65,39 +62,49 @@ fn move_player(
 
     
     if direction.length_squared() > 0.0 {
-        direction = direction.normalize();
-        let target = Dir2::new_unchecked(direction);
-        let origin = Vector::new(player_transform.translation.x, player_transform.translation.y);
-        // since the physics are 2d, we only care about the z-axis rotation from the quaternion
-        let (_, _, rotation) = player_transform.rotation.to_euler(EulerRot::XYZ);
-        let config = ShapeCastConfig::from_max_distance(player_speed.0 * time.delta_secs());
+        let original_movement = direction * player_speed.0 * time.delta_secs();
+        let mut remaining_movement = original_movement;
+
         let filter = SpatialQueryFilter::default().with_excluded_entities([player_entity]);
+        while remaining_movement.length_squared() > f32::EPSILON {
+            let origin = Vector::new(player_transform.translation.x, player_transform.translation.y);
+            let target_dir = Dir2::new_unchecked(remaining_movement.normalize());
+            // since the physics are 2d, we only care about the z-axis rotation from the quaternion
+            let (_, _, rotation) = player_transform.rotation.to_euler(EulerRot::XYZ);
+            let config = ShapeCastConfig::from_max_distance(remaining_movement.length());
 
-        if let Some(first_hit) = spatial_query.cast_shape( player_collider, origin, rotation, target, &config, &filter) {
-            let (first_hit_rigidbody, mut first_hit_linear_velocity) = cast_query.get_mut(first_hit.entity).expect("Entity with GameLayer(Rigidbody) did not have Rigidbody component");
-            
-            let safe_offset = f32::EPSILON * 100.0;
-            let adjusted_distance = first_hit.distance - safe_offset;
-            let movement = direction * adjusted_distance;
+            match spatial_query.cast_shape( player_collider, origin, rotation, target_dir, &config, &filter) {
+                Some(hit) => {
+                    let (body, mut velocity) = cast_query.get_mut(hit.entity).expect("Missing Rigidbody component");
 
-            player_transform.translation.x += movement.x;
-            player_transform.translation.y += movement.y;
+                    let move_distance = (hit.distance - f32::EPSILON * 100.0).max(0.0);
+                    let move_vec = target_dir * move_distance;
 
-            if first_hit_rigidbody.is_dynamic() {
-                let push_force = direction * player_speed.0 * 2.0 * time.delta_secs();
-                first_hit_linear_velocity.x += push_force.x;
-                first_hit_linear_velocity.y += push_force.y;
-                println!("setting to true");
-                force_physics.0 = true;
+                    player_transform.translation += move_vec.extend(0.0);
+                    remaining_movement -= move_vec;
+
+                    match body {
+                        RigidBody::Dynamic => {
+                            let push_force = target_dir * player_speed.0 * 2.0 * time.delta_secs();
+                            velocity.x += push_force.x;
+                            velocity.y += push_force.y;
+                            break
+                        },
+                        _ => {
+                            let original_speed = remaining_movement.length();
+                            let new_direction = remaining_movement - hit.normal1 * remaining_movement.dot(hit.normal1); // here the movement that goes into the obstacle is lost
+                            remaining_movement = new_direction * original_speed; // multiply by original speed to recover lost speed
+                        }
+                    }
+
+                },
+                None => {
+                    player_transform.translation += remaining_movement.extend(0.0);
+                    break;
+                }
             }
-        } else {
-            let movement = direction * player_speed.0 * time.delta_secs();
-
-            player_transform.translation.x += movement.x;
-            player_transform.translation.y += movement.y;
         }
     }
-
 
 
     // debugging keybinds
@@ -118,25 +125,4 @@ fn move_player(
             }
         }
     }
-}
-
-
-// physics setup to force steps
-#[derive(Resource, Default)]
-pub struct ShouldStepPhysics(pub bool);
-
-fn force_physics(should_step_phyisics: Res<ShouldStepPhysics>) -> bool {
-    should_step_phyisics.0
-}
-
-pub fn step_physics_if_needed(
-    world: &mut World,
-) {
-    println!("exclusive");
-    // for _ in 0..1 {
-    //     world.resource_mut::<Time<Physics>>().advance_by(Duration::from_secs_f64(1.0/64.0));
-    //     world.run_schedule(PhysicsSchedule);
-    // }
-    world.resource_mut::<ShouldStepPhysics>().0 = false;
-    println!("leaving exclusive");
 }
