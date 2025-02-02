@@ -49,6 +49,8 @@ fn spawn_cube(
         Transform::from_xyz(2.5, 0.0, 0.25),
         Collider::rectangle(0.5, 0.5),
         RigidBody::Dynamic,
+        CollisionLayers::new(LayerMask(0b0010), LayerMask::ALL),
+        TransformInterpolation
     ));
 
     // cube static

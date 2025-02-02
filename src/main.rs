@@ -1,6 +1,5 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-
 mod components;
 mod plugins;
 
@@ -17,3 +16,4 @@ fn main() {
         .insert_resource(Gravity(Vec2::ZERO))
         .run();
 }
+
