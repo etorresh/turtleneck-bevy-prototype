@@ -66,33 +66,24 @@ fn move_player(
         let config = ShapeCastConfig::from_max_distance(player_speed.0 * time.delta_secs());
         let filter = SpatialQueryFilter::default().with_excluded_entities([player_entity]);
 
-        let mut allow_movement = true;
         if let Some(first_hit) = spatial_query.cast_shape( player_collider, origin, rotation, target, &config, &filter) {
-            if first_hit.distance == 0.0 {
-                allow_movement = false;
-            }
             println!("First hit: {:?}", first_hit);
+            let movement = direction * (first_hit.distance + 0.01);
+            player_transform.translation.x += movement.x;
+            player_transform.translation.y += movement.y;
+
         } else {
-            
-        }
-
-        let mut dynamic_speed = player_speed.0;
-
-        if !allow_movement {
-            dynamic_speed = dynamic_speed * 0.0;
-            // move player as close as possible to object it would collide with
-            
-        }
+            let mut dynamic_speed = player_speed.0;
+            let movement = direction * dynamic_speed * time.delta_secs();
     
-        let movement = direction * dynamic_speed * time.delta_secs();
-
-        player_transform.translation.x += movement.x;
-        player_transform.translation.y += movement.y;
+            player_transform.translation.x += movement.x;
+            player_transform.translation.y += movement.y;
+        }
     }
 
 
 
-    // delete this block later, it's just for fun and to showcase the 2d collisions with 3d modelsa
+    // delete this block later, it's just for fun and to showcase the 2d collisions with 3d models
     {
         if keys.pressed(KeyCode::KeyF) {
             player_transform.translation.z += 1.0 * player_speed.0 * time.delta_secs();
