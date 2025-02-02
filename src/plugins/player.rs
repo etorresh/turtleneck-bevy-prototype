@@ -79,7 +79,9 @@ fn move_player(
         let mut dynamic_speed = player_speed.0;
 
         if !allow_movement {
-            dynamic_speed = dynamic_speed * 0.5;
+            dynamic_speed = dynamic_speed * 0.0;
+            // move player as close as possible to object it would collide with
+            
         }
     
         let movement = direction * dynamic_speed * time.delta_secs();
@@ -90,7 +92,7 @@ fn move_player(
 
 
 
-    // delete this block later, it's just for fun and to showcase the 2d collisions with 3d models
+    // delete this block later, it's just for fun and to showcase the 2d collisions with 3d modelsa
     {
         if keys.pressed(KeyCode::KeyF) {
             player_transform.translation.z += 1.0 * player_speed.0 * time.delta_secs();
