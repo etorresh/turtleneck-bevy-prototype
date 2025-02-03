@@ -46,12 +46,12 @@ fn spawn_player(
 fn move_player(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&mut Transform, &Speed, &Collider, Entity), With<Player>>,
-    mut cast_query: Query<(&RigidBody, &mut LinearVelocity)>,
+    mut player_query: Query<(&mut Transform, &Speed, &Collider, Entity), With<Player>>,
+    mut collision_target_query: Query<(&RigidBody, &mut LinearVelocity)>,
     spatial_query: SpatialQuery,
     mut physics_time: ResMut<Time<Physics>>,
 ) {
-    let (mut player_transform, player_speed, player_collider, player_entity) = query.single_mut();
+    let (mut player_transform, player_speed, player_collider, player_entity) = player_query.single_mut();
 
     let direction = Vec2::new(
         (keys.pressed(KeyCode::KeyD) as i32 - keys.pressed(KeyCode::KeyA) as i32) as f32,
@@ -82,7 +82,7 @@ fn move_player(
 
             match shape_hit {
                 Some(hit) => {
-                    let (body, mut velocity) = cast_query
+                    let (body, mut velocity) = collision_target_query
                         .get_mut(hit.entity)
                         .expect("Missing Rigidbody component");
                     let safe_distance = (hit.distance - COLLISION_EPSILON).max(0.0);
