@@ -5,8 +5,13 @@ use avian2d::{math::Vector, prelude::*};
 use bevy::prelude::*;
 pub struct PlayerPlugin;
 
-// offset that can prevent floating value errors in collisions
-const COLLISION_OFFSET: f32 = f32::EPSILON * 50.0;
+// offset to avoid floating-point precision errors in collision detection
+// a value of 80_000.0 * f32::EPSILON seems to work even for sharp corners
+// but it might fail at high frame rates and get the player stuck 
+// an alternative approach is detecting static rigid bodies and recalculating the path,
+// but this would prevent getting as close to static objects since you're limited by
+// your own speed (if you're able to travel further than the distance to the static object then you won't move at all)
+const COLLISION_OFFSET: f32 = f32::EPSILON * 80_000.0;
 
 #[derive(Component)]
 struct Player;
@@ -69,7 +74,7 @@ fn move_player(
             );
             let target_dir = Dir2::new_unchecked(movement_direction);
             let (_, _, rotation) = player_transform.rotation.to_euler(EulerRot::XYZ);
-
+//
             let shape_hit = spatial_query.cast_shape (
                 player_collider,
                 origin,
@@ -81,45 +86,28 @@ fn move_player(
 
             match shape_hit {
                 Some(hit) => {
-                    if attempts == 3 {
-                        println!("\n\n");
-                    }
-                    println!("hit_data: {:?}", hit);
-                    println!("{:?}", COLLISION_OFFSET);
-                    let move_distance = (hit.distance - COLLISION_OFFSET).max(0.0);
-                    let mut will_clip = false;
-                    if hit.distance - move_distance <= COLLISION_OFFSET {
-                        will_clip = true;
-                    }
-
-                    println!("attempt: {:?} move_distance: {:?} movement_direction: {:?} \n", attempts, move_distance, movement_direction);
-                    println!("player_transform.translation: {:?}", player_transform.translation);
-
                     let (body, mut velocity) = cast_query
                         .get_mut(hit.entity)
                         .expect("Missing Rigidbody component");
                     match body {
                         RigidBody::Dynamic => {
                             player_transform.translation +=
-                            (movement_direction * move_distance).extend(0.0);
-                            remaining_budget -= move_distance;
+                            (movement_direction * (hit.distance - COLLISION_OFFSET)).extend(0.0);
                             let push_force = target_dir * player_speed.0 * 2.0 * time.delta_secs();
                             velocity.x += push_force.x;
                             velocity.y += push_force.y;
                             break;
                         }
                         _ => {
+                            let safe_movement = hit.distance - COLLISION_OFFSET;
+                            if safe_movement > COLLISION_OFFSET {
+                                player_transform.translation += (movement_direction * safe_movement).extend(0.0);
+                                remaining_budget -= safe_movement;
+                            }
                             let slide_vector = desired_movement
                                 - hit.normal1 * desired_movement.dot(hit.normal1);
-                            if !will_clip {
-                                player_transform.translation +=
-                                (movement_direction * move_distance).extend(0.0);
-                                remaining_budget -= move_distance;
-                            }
                             movement_direction = match slide_vector.try_normalize() {
-                                Some(dir) => {
-                                    dir
-                                },
+                                Some(dir) => dir,
                                 None => break,
                             };
                         }
