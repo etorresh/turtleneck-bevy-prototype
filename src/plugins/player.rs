@@ -6,12 +6,13 @@ use bevy::prelude::*;
 pub struct PlayerPlugin;
 
 // offset to avoid floating-point precision errors in collision detection
-// a value of 80_000.0 * f32::EPSILON seems to work even for sharp corners
+// a value of 80_000.0 * f32::EPSILON seems to work even for sharp corners (around 0.0095)
 // but it might fail at high frame rates and get the player stuck 
 // an alternative approach is detecting static rigid bodies and recalculating the path,
 // but this would prevent getting as close to static objects since you're limited by
 // your own speed (if you're able to travel further than the distance to the static object then you won't move at all)
-const COLLISION_OFFSET: f32 = f32::EPSILON * 80_000.0;
+const COLLISION_EPSILON: f32 = f32::EPSILON * 80_000.0;
+const MAX_MOVEMENTS: u8 = 2;
 
 #[derive(Component)]
 struct Player;
@@ -59,29 +60,22 @@ fn move_player(
     );
 
     if direction.length_squared() > 0.0 {
-        let frame_budget = player_speed.0 * time.delta_secs();
-        let mut remaining_budget = frame_budget;
+        let mut remaining_distance = player_speed.0 * time.delta_secs();
         let mut movement_direction = direction.normalize();
-        let filter = SpatialQueryFilter::default().with_excluded_entities([player_entity]);
+        for _ in 0..MAX_MOVEMENTS {
+            // 0.0 instead of COLLISION_EPSILON to allow movement right next to dynamic rigidbodies
+            if remaining_distance <= 0.0 {
+                break;
+            }
+            let raw_movement = movement_direction * remaining_distance;
 
-        
-        let mut attempts = 2;
-        while remaining_budget > 0.0 && attempts > 0 {
-            let desired_movement = movement_direction * remaining_budget;
-            let origin = Vector::new(
-                player_transform.translation.x,
-                player_transform.translation.y,
-            );
-            let target_dir = Dir2::new_unchecked(movement_direction);
-            let (_, _, rotation) = player_transform.rotation.to_euler(EulerRot::XYZ);
-//
             let shape_hit = spatial_query.cast_shape (
                 player_collider,
-                origin,
-                rotation,
-                target_dir,
-                &ShapeCastConfig::from_max_distance(remaining_budget),
-                &filter,
+                Vector::new(player_transform.translation.x, player_transform.translation.y,),
+                player_transform.rotation.to_euler(EulerRot::XYZ).2,
+                Dir2::new_unchecked(movement_direction),
+                &ShapeCastConfig::from_max_distance(remaining_distance),
+                &SpatialQueryFilter::default().with_excluded_entities([player_entity]),
             );
 
             match shape_hit {
@@ -89,23 +83,25 @@ fn move_player(
                     let (body, mut velocity) = cast_query
                         .get_mut(hit.entity)
                         .expect("Missing Rigidbody component");
+                    let safe_distance = (hit.distance - COLLISION_EPSILON).max(0.0);
+                    let safe_movement = movement_direction * safe_distance;
                     match body {
                         RigidBody::Dynamic => {
-                            player_transform.translation +=
-                            (movement_direction * (hit.distance - COLLISION_OFFSET)).extend(0.0);
-                            let push_force = target_dir * player_speed.0 * 2.0 * time.delta_secs();
-                            velocity.x += push_force.x;
-                            velocity.y += push_force.y;
+                            // using the hit.distance * movement_direction and slightly clipping into dynamic objects looks better BUT
+                            // it blocks movement if physics are paused (which will be a valid powerup for the player) so let's
+                            // use the safe_movement instead
+                            player_transform.translation += safe_movement.extend(0.0);
+                            let push_force = movement_direction * player_speed.0 * 2.0 * time.delta_secs();
+                            velocity.0 += push_force;
                             break;
                         }
                         _ => {
-                            let safe_movement = hit.distance - COLLISION_OFFSET;
-                            if safe_movement > COLLISION_OFFSET {
-                                player_transform.translation += (movement_direction * safe_movement).extend(0.0);
-                                remaining_budget -= safe_movement;
+                            if safe_distance > COLLISION_EPSILON {
+                                player_transform.translation += (safe_movement).extend(0.0);
+                                remaining_distance -= safe_distance;
                             }
-                            let slide_vector = desired_movement
-                                - hit.normal1 * desired_movement.dot(hit.normal1);
+                            let slide_vector = raw_movement
+                                - hit.normal1 * raw_movement.dot(hit.normal1);
                             movement_direction = match slide_vector.try_normalize() {
                                 Some(dir) => dir,
                                 None => break,
@@ -114,11 +110,10 @@ fn move_player(
                     }
                 }
                 None => {
-                    player_transform.translation += desired_movement.extend(0.0);
+                    player_transform.translation += raw_movement.extend(0.0);
                     break;
                 }
             }
-            attempts -= 1;
         }
     }
 
