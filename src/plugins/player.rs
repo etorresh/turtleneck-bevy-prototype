@@ -1,13 +1,12 @@
-use core::f32;
-
 use crate::components::camera::CameraFocus;
 use avian2d::{math::Vector, prelude::*};
 use bevy::prelude::*;
+use core::f32;
 pub struct PlayerPlugin;
 
 // offset to avoid floating-point precision errors in collision detection
 // a value of 80_000.0 * f32::EPSILON seems to work even for sharp corners (around 0.0095)
-// but it might fail at high frame rates and get the player stuck 
+// but it might fail at high frame rates and get the player stuck
 // an alternative approach is detecting static rigid bodies and recalculating the path,
 // but this would prevent getting as close to static objects since you're limited by
 // your own speed (if you're able to travel further than the distance to the static object then you won't move at all)
@@ -63,15 +62,18 @@ fn move_player(
         let mut remaining_distance = player_speed.0 * time.delta_secs();
         let mut movement_direction = direction.normalize();
         for _ in 0..MAX_MOVEMENTS {
-            // 0.0 instead of COLLISION_EPSILON to allow movement right next to dynamic rigidbodies
+            // 0.0 instead of COLLISION_EPSILON to allow movement towards dynamic rigidbodies
             if remaining_distance <= 0.0 {
                 break;
             }
             let raw_movement = movement_direction * remaining_distance;
 
-            let shape_hit = spatial_query.cast_shape (
+            let shape_hit = spatial_query.cast_shape(
                 player_collider,
-                Vector::new(player_transform.translation.x, player_transform.translation.y,),
+                Vector::new(
+                    player_transform.translation.x,
+                    player_transform.translation.y,
+                ),
                 player_transform.rotation.to_euler(EulerRot::XYZ).2,
                 Dir2::new_unchecked(movement_direction),
                 &ShapeCastConfig::from_max_distance(remaining_distance),
@@ -91,7 +93,8 @@ fn move_player(
                             // it blocks movement if physics are paused (which will be a valid powerup for the player) so let's
                             // use the safe_movement instead
                             player_transform.translation += safe_movement.extend(0.0);
-                            let push_force = movement_direction * player_speed.0 * 2.0 * time.delta_secs();
+                            let push_force =
+                                movement_direction * player_speed.0 * 2.0 * time.delta_secs();
                             velocity.0 += push_force;
                             break;
                         }
@@ -100,8 +103,8 @@ fn move_player(
                                 player_transform.translation += (safe_movement).extend(0.0);
                                 remaining_distance -= safe_distance;
                             }
-                            let slide_vector = raw_movement
-                                - hit.normal1 * raw_movement.dot(hit.normal1);
+                            let slide_vector =
+                                raw_movement - hit.normal1 * raw_movement.dot(hit.normal1);
                             movement_direction = match slide_vector.try_normalize() {
                                 Some(dir) => dir,
                                 None => break,
