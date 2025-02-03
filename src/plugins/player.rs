@@ -2,11 +2,11 @@ use core::f32;
 
 use crate::components::camera::CameraFocus;
 use avian2d::{math::Vector, prelude::*};
-use bevy::{math::NormedVectorSpace, prelude::*};
+use bevy::prelude::*;
 pub struct PlayerPlugin;
 
 // offset that can prevent floating value errors in collisions
-const COLLISION_OFFSET: f32 = f32::EPSILON * 100.0;
+const COLLISION_OFFSET: f32 = f32::EPSILON * 50.0;
 
 #[derive(Component)]
 struct Player;
@@ -59,55 +59,67 @@ fn move_player(
         let mut movement_direction = direction.normalize();
         let filter = SpatialQueryFilter::default().with_excluded_entities([player_entity]);
 
-        let mut attempts = 3;
+        
+        let mut attempts = 2;
         while remaining_budget > 0.0 && attempts > 0 {
-            
-            attempts -= 1;
             let desired_movement = movement_direction * remaining_budget;
             let origin = Vector::new(
                 player_transform.translation.x,
                 player_transform.translation.y,
             );
             let target_dir = Dir2::new_unchecked(movement_direction);
-            // since the physics are 2d, we only care about the z-axis rotation from the quaternion
             let (_, _, rotation) = player_transform.rotation.to_euler(EulerRot::XYZ);
 
-            match spatial_query.cast_shape(
+            let shape_hit = spatial_query.cast_shape (
                 player_collider,
                 origin,
                 rotation,
                 target_dir,
                 &ShapeCastConfig::from_max_distance(remaining_budget),
                 &filter,
-            ) {
+            );
+
+            match shape_hit {
                 Some(hit) => {
-                    let move_distance = hit.distance - COLLISION_OFFSET;
-                    if move_distance == 0.0 {
-                        break;
+                    if attempts == 3 {
+                        println!("\n\n");
                     }
-                    player_transform.translation +=
-                        (movement_direction * move_distance).extend(0.0);
-                    remaining_budget -= move_distance;
+                    println!("hit_data: {:?}", hit);
+                    println!("{:?}", COLLISION_OFFSET);
+                    let move_distance = (hit.distance - COLLISION_OFFSET).max(0.0);
+                    let mut will_clip = false;
+                    if hit.distance - move_distance <= COLLISION_OFFSET {
+                        will_clip = true;
+                    }
+
+                    println!("attempt: {:?} move_distance: {:?} movement_direction: {:?} \n", attempts, move_distance, movement_direction);
+                    println!("player_transform.translation: {:?}", player_transform.translation);
 
                     let (body, mut velocity) = cast_query
                         .get_mut(hit.entity)
                         .expect("Missing Rigidbody component");
                     match body {
                         RigidBody::Dynamic => {
+                            player_transform.translation +=
+                            (movement_direction * move_distance).extend(0.0);
+                            remaining_budget -= move_distance;
                             let push_force = target_dir * player_speed.0 * 2.0 * time.delta_secs();
                             velocity.x += push_force.x;
                             velocity.y += push_force.y;
                             break;
                         }
                         _ => {
-                            // only try to slide if moving diagonally
-                            if movement_direction.x == 0.0 || movement_direction.y == 0.0 {
-                                break;
-                            }
                             let slide_vector = desired_movement
                                 - hit.normal1 * desired_movement.dot(hit.normal1);
+                            if !will_clip {
+                                player_transform.translation +=
+                                (movement_direction * move_distance).extend(0.0);
+                                remaining_budget -= move_distance;
+                            }
                             movement_direction = match slide_vector.try_normalize() {
-                                Some(dir) => dir,
+                                Some(dir) => {
+                                    dir
+                                },
                                 None => break,
                             };
                         }
@@ -118,6 +130,7 @@ fn move_player(
                     break;
                 }
             }
+            attempts -= 1;
         }
     }
 
