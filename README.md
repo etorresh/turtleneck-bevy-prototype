@@ -5,9 +5,6 @@ compile optimization:
 - using clang llvm linker
 - generic sharing with nightly
 
-
-
-
 Camera is Z-up because it makes 2.5D top-down easier.
 
 I want the player controller to be able to interact with dynamic rigidbodies.
