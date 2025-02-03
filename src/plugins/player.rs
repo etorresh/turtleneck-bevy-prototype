@@ -1,10 +1,12 @@
 use core::f32;
-use std::{alloc::System, time::Duration};
 
-use avian2d::{math::Vector, prelude::*};
-use bevy::{ecs::system::SystemState, prelude::*};
 use crate::components::camera::CameraFocus;
+use avian2d::{math::Vector, prelude::*};
+use bevy::{math::NormedVectorSpace, prelude::*};
 pub struct PlayerPlugin;
+
+// offset that can prevent floating value errors in collisions
+const COLLISION_OFFSET: f32 = f32::EPSILON * 100.0;
 
 #[derive(Component)]
 struct Player;
@@ -46,66 +48,78 @@ fn move_player(
 ) {
     let (mut player_transform, player_speed, player_collider, player_entity) = query.single_mut();
 
-    let mut direction = Vec2::ZERO;
-    if keys.pressed(KeyCode::KeyD) {
-        direction.x += 1.0;
-    }
-    if keys.pressed(KeyCode::KeyA) {
-        direction.x -= 1.0;
-    }
-    if keys.pressed(KeyCode::KeyW) {
-        direction.y += 1.0;
-    }
-    if keys.pressed(KeyCode::KeyS) {
-        direction.y -= 1.0;
-    }
+    let direction = Vec2::new(
+        (keys.pressed(KeyCode::KeyD) as i32 - keys.pressed(KeyCode::KeyA) as i32) as f32,
+        (keys.pressed(KeyCode::KeyW) as i32 - keys.pressed(KeyCode::KeyS) as i32) as f32,
+    );
 
-    
     if direction.length_squared() > 0.0 {
-        let original_movement = direction * player_speed.0 * time.delta_secs();
-        let mut remaining_movement = original_movement;
-
+        let frame_budget = player_speed.0 * time.delta_secs();
+        let mut remaining_budget = frame_budget;
+        let mut movement_direction = direction.normalize();
         let filter = SpatialQueryFilter::default().with_excluded_entities([player_entity]);
-        while remaining_movement.length_squared() > f32::EPSILON {
-            let origin = Vector::new(player_transform.translation.x, player_transform.translation.y);
-            let target_dir = Dir2::new_unchecked(remaining_movement.normalize());
+
+        let mut attempts = 3;
+        while remaining_budget > 0.0 && attempts > 0 {
+            
+            attempts -= 1;
+            let desired_movement = movement_direction * remaining_budget;
+            let origin = Vector::new(
+                player_transform.translation.x,
+                player_transform.translation.y,
+            );
+            let target_dir = Dir2::new_unchecked(movement_direction);
             // since the physics are 2d, we only care about the z-axis rotation from the quaternion
             let (_, _, rotation) = player_transform.rotation.to_euler(EulerRot::XYZ);
-            let config = ShapeCastConfig::from_max_distance(remaining_movement.length());
 
-            match spatial_query.cast_shape( player_collider, origin, rotation, target_dir, &config, &filter) {
+            match spatial_query.cast_shape(
+                player_collider,
+                origin,
+                rotation,
+                target_dir,
+                &ShapeCastConfig::from_max_distance(remaining_budget),
+                &filter,
+            ) {
                 Some(hit) => {
-                    let (body, mut velocity) = cast_query.get_mut(hit.entity).expect("Missing Rigidbody component");
+                    let move_distance = hit.distance - COLLISION_OFFSET;
+                    if move_distance == 0.0 {
+                        break;
+                    }
+                    player_transform.translation +=
+                        (movement_direction * move_distance).extend(0.0);
+                    remaining_budget -= move_distance;
 
-                    let move_distance = (hit.distance - f32::EPSILON * 100.0).max(0.0);
-                    let move_vec = target_dir * move_distance;
-
-                    player_transform.translation += move_vec.extend(0.0);
-                    remaining_movement -= move_vec;
-
+                    let (body, mut velocity) = cast_query
+                        .get_mut(hit.entity)
+                        .expect("Missing Rigidbody component");
                     match body {
                         RigidBody::Dynamic => {
                             let push_force = target_dir * player_speed.0 * 2.0 * time.delta_secs();
                             velocity.x += push_force.x;
                             velocity.y += push_force.y;
-                            break
-                        },
+                            break;
+                        }
                         _ => {
-                            let original_speed = remaining_movement.length();
-                            let new_direction = remaining_movement - hit.normal1 * remaining_movement.dot(hit.normal1); // here the movement that goes into the obstacle is lost
-                            remaining_movement = new_direction * original_speed; // multiply by original speed to recover lost speed
+                            // only try to slide if moving diagonally
+                            if movement_direction.x == 0.0 || movement_direction.y == 0.0 {
+                                break;
+                            }
+                            let slide_vector = desired_movement
+                                - hit.normal1 * desired_movement.dot(hit.normal1);
+                            movement_direction = match slide_vector.try_normalize() {
+                                Some(dir) => dir,
+                                None => break,
+                            };
                         }
                     }
-
-                },
+                }
                 None => {
-                    player_transform.translation += remaining_movement.extend(0.0);
+                    player_transform.translation += desired_movement.extend(0.0);
                     break;
                 }
             }
         }
     }
-
 
     // debugging keybinds
     {
@@ -115,7 +129,7 @@ fn move_player(
         if keys.pressed(KeyCode::KeyG) {
             player_transform.translation.z -= 1.0 * player_speed.0 * time.delta_secs();
         }
-        player_transform.translation.z = player_transform.translation.z.max(0.25); 
+        player_transform.translation.z = player_transform.translation.z.max(0.25);
 
         if keys.just_released(KeyCode::KeyH) {
             if physics_time.is_paused() {

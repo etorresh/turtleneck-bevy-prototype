@@ -1,6 +1,5 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use crate::components::camera::CameraFocus;
 
 pub struct WorldPlugin;
 
@@ -17,12 +16,12 @@ fn spawn_floor(
 ) {
     // circular base
     commands.spawn(
-        ((
+        (
             Mesh3d(meshes.add(Circle::new(5.0))),
             MeshMaterial3d(materials.add(Color::WHITE)),
             Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2))
                 .looking_at(Vec3::ZERO, Vec3::Z),
-        )),
+        ),
     );
 }
 
@@ -49,7 +48,7 @@ fn spawn_cube(
         Transform::from_xyz(2.5, 0.0, 0.25),
         Collider::rectangle(0.5, 0.5),
         RigidBody::Dynamic,
-        TransformInterpolation
+        TransformInterpolation,
     ));
 
     // cube static
@@ -68,11 +67,20 @@ fn spawn_cube(
         Collider::rectangle(0.5, 0.5),
         RigidBody::Static,
     ));
-        // cube static
+    // cube static
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
         MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
         Transform::from_xyz(-3.0, 0.5, 0.25),
+        Collider::rectangle(0.5, 0.5),
+        RigidBody::Static,
+    ));
+
+    // cube static
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
+        MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
+        Transform::from_xyz(-3.0, 3.0, 0.25) .with_rotation(Quat::from_rotation_z(45_f32.to_radians())),
         Collider::rectangle(0.5, 0.5),
         RigidBody::Static,
     ));

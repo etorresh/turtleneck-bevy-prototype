@@ -16,4 +16,3 @@ fn main() {
         .insert_resource(Gravity(Vec2::ZERO))
         .run();
 }
-
