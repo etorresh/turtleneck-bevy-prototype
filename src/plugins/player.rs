@@ -4,6 +4,18 @@ use bevy::prelude::*;
 use core::f32;
 pub struct PlayerPlugin;
 
+/* 
+TO DO:
+- dynamic rigidbodies with linear_damping feel jittery to push around,
+that's because we push them, and then catch up to them and push them again
+compared to having no linear_damping were they just move away from the player
+matching its speed. the solution is to add a system that keeps track of the objects
+being pushed and sets their linear damping to zero, and then once the player is no longer
+touching them it sets it back to their original value. It might be important for the push
+force to be related to the players speed, that way the system can be integrated with
+a weight system that also makes certain objects harder to push
+*/
+
 // offset to avoid floating-point precision errors in collision detection
 // a value of 80_000.0 * f32::EPSILON seems to work even for sharp corners (around 0.0095)
 // but it might fail at high frame rates and get the player stuck
@@ -17,13 +29,14 @@ const COLLISION_EPSILON: f32 = f32::EPSILON * 80_000.0;
 // I lean towards keeping it at 2 because values greater than 2 jitter when colliding with sharp colliders
 const MAX_MOVEMENTS: u8 = 2;
 
-const PUSH_FORCE: f32 = 4.0;
-
 #[derive(Component)]
 struct Player;
 
 #[derive(Component)]
 struct Speed(f32);
+
+#[derive(Component)]
+struct PushForce(f32);
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
@@ -46,18 +59,19 @@ fn spawn_player(
         RigidBody::Kinematic,
         Speed(3.0),
         CameraFocus,
+        PushForce(2.0)
     ));
 }
 
 fn move_player(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
-    mut player_query: Query<(&mut Transform, &Speed, &Collider, Entity), With<Player>>,
+    mut player_query: Query<(&mut Transform, &Speed, &Collider, Entity, &mut PushForce), With<Player>>,
     mut collision_target_query: Query<(&RigidBody, &mut LinearVelocity)>,
     spatial_query: SpatialQuery,
     mut physics_time: ResMut<Time<Physics>>,
 ) {
-    let (mut player_transform, player_speed, player_collider, player_entity) = player_query.single_mut();
+    let (mut player_transform, player_speed, player_collider, player_entity, mut push_force) = player_query.single_mut();
 
     let direction = Vec2::new(
         (keys.pressed(KeyCode::KeyD) as i32 - keys.pressed(KeyCode::KeyA) as i32) as f32,
@@ -101,7 +115,7 @@ fn move_player(
                             // we do not apply angular force because it makes pushing objects less predictable
                             player_transform.translation += safe_movement.extend(0.0);
                             let push_force =
-                                movement_direction * player_speed.0 * PUSH_FORCE * time.delta_secs();
+                                movement_direction * player_speed.0 * push_force.0 * time.delta_secs();
                             velocity.0 += push_force;
                             break;
                         }
@@ -138,9 +152,12 @@ fn move_player(
         player_transform.translation.z = player_transform.translation.z.max(0.25);
 
         if keys.just_released(KeyCode::KeyH) {
+            let temp = push_force.0;
             if physics_time.is_paused() {
+                push_force.0 = temp;
                 physics_time.unpause();
             } else {
+                push_force.0 = 4.0;
                 physics_time.pause();
             }
         }
