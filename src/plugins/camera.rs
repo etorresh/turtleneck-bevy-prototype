@@ -1,5 +1,5 @@
 use crate::components::camera::CameraFocus;
-use bevy::prelude::*;
+use bevy::{prelude::*, render::view::RenderLayers};
 
 pub struct CameraPlugin;
 
