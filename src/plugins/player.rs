@@ -11,6 +11,10 @@ pub struct PlayerPlugin;
 // but this would prevent getting as close to static objects since you're limited by
 // your own speed (if you're able to travel further than the distance to the static object then you won't move at all)
 const COLLISION_EPSILON: f32 = f32::EPSILON * 80_000.0;
+// 2 iterations are enough to resolve corner cases: 
+// 1st handles the first wall, 2nd resolves the second wall (if in a corner)
+// A 3rd iteration isn't needed, as movement becomes negligible (this might change if the player speed changes)
+// I lean towards keeping it at 2 because values greater than 2 jitter when colliding with sharp colliders
 const MAX_MOVEMENTS: u8 = 2;
 
 #[derive(Component)]
@@ -61,7 +65,8 @@ fn move_player(
     if direction.length_squared() > 0.0 {
         let mut remaining_distance = player_speed.0 * time.delta_secs();
         let mut movement_direction = direction.normalize();
-        for _ in 0..MAX_MOVEMENTS {
+        for i in 0..MAX_MOVEMENTS {
+            println!("{:?}", i);
             // 0.0 instead of COLLISION_EPSILON to allow movement towards dynamic rigidbodies
             if remaining_distance <= 0.0 {
                 break;
@@ -103,12 +108,17 @@ fn move_player(
                                 player_transform.translation += (safe_movement).extend(0.0);
                                 remaining_distance -= safe_distance;
                             }
-                            let slide_vector =
-                                raw_movement - hit.normal1 * raw_movement.dot(hit.normal1);
+                            let slide_vector = raw_movement - hit.normal1 * raw_movement.dot(hit.normal1);
                             movement_direction = match slide_vector.try_normalize() {
                                 Some(dir) => dir,
-                                None => break,
+                                None => {
+                                    println!("breaking slide vector");
+                                    break},
                             };
+                            println!(
+                                "Iteration: {:?}, Remaining Distance: {:?}, Slide Vector Length: {:?}",
+                                i, remaining_distance, slide_vector.length()
+                            );
                         }
                     }
                 }
