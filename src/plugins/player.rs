@@ -1,8 +1,7 @@
 use crate::components::camera::CameraFocus;
 use avian2d::{math::Vector, prelude::*};
-use bevy::{prelude::*, state::commands};
+use bevy::prelude::*;
 use core::f32;
-use std::{os::linux::raw, time::Duration};
 pub struct PlayerPlugin;
 
 /* 
