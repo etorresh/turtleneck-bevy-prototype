@@ -47,6 +47,8 @@ fn spawn_cube(
         Collider::rectangle(0.5, 0.5),
         RigidBody::Dynamic,
         TransformInterpolation,
+        LinearDamping(0.9),
+        AngularDamping(0.9)
     ));
 
     // cube static

@@ -17,6 +17,8 @@ const COLLISION_EPSILON: f32 = f32::EPSILON * 80_000.0;
 // I lean towards keeping it at 2 because values greater than 2 jitter when colliding with sharp colliders
 const MAX_MOVEMENTS: u8 = 2;
 
+const PUSH_FORCE: f32 = 4.0;
+
 #[derive(Component)]
 struct Player;
 
@@ -96,9 +98,10 @@ fn move_player(
                             // using the hit.distance * movement_direction and slightly clipping into dynamic objects looks better BUT
                             // it blocks movement if physics are paused (which will be a valid powerup for the player) so let's
                             // use the safe_movement instead
+                            // we do not apply angular force because it makes pushing objects less predictable
                             player_transform.translation += safe_movement.extend(0.0);
                             let push_force =
-                                movement_direction * player_speed.0 * 2.0 * time.delta_secs();
+                                movement_direction * player_speed.0 * PUSH_FORCE * time.delta_secs();
                             velocity.0 += push_force;
                             break;
                         }
