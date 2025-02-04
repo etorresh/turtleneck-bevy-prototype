@@ -2,7 +2,7 @@ use crate::components::camera::CameraFocus;
 use avian2d::{math::Vector, prelude::*};
 use bevy::{prelude::*, state::commands};
 use core::f32;
-use std::time::Duration;
+use std::{os::linux::raw, time::Duration};
 pub struct PlayerPlugin;
 
 /* 
@@ -94,7 +94,6 @@ fn move_player(
     mut collision_target_query: Query<(&RigidBody, &mut LinearVelocity)>,
     spatial_query: SpatialQuery,
     mut physics_time: ResMut<Time<Physics>>,
-    mut force_physics: ResMut<ForcePhysicsStep>
 ) {
     let (mut player_transform, player_speed, player_collider, player_entity, mut push_force, mut push_force_paused) = player_query.single_mut();
 
@@ -136,9 +135,7 @@ fn move_player(
                         RigidBody::Dynamic => {
                             player_transform.translation += safe_movement.extend(0.0);
                             velocity.0 += movement_direction * player_speed.0 * push_force.0 * time.delta_secs();
-                            if !physics_time.is_paused() {
-                                force_physics.0 = true;
-                            }
+                            break;
                         }
                         _ => {
                             if safe_distance > COLLISION_EPSILON {
