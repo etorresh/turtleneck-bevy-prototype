@@ -1,7 +1,8 @@
 use crate::components::camera::CameraFocus;
 use avian2d::{math::Vector, prelude::*};
-use bevy::prelude::*;
+use bevy::{prelude::*, state::commands};
 use core::f32;
+use std::time::Duration;
 pub struct PlayerPlugin;
 
 /* 
@@ -55,14 +56,15 @@ struct PushForce(f32);
 #[derive(Component)]
 struct PushForcePause(f32);
 
-#[derive(Resource, Default)]
-struct LastPushedEntity(Option<Entity>);
+#[derive(Resource)]
+struct ForcePhysicsStep(bool);
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_player)
             .add_systems(Update, move_player)
-            .init_resource::<LastPushedEntity>();
+            .add_systems(Update, step_physics_if_needed.run_if(force_physics).after(move_player))
+            .insert_resource(ForcePhysicsStep(false));
     }
 }
 
@@ -90,10 +92,9 @@ fn move_player(
     keys: Res<ButtonInput<KeyCode>>,
     mut player_query: Query<(&mut Transform, &Speed, &Collider, Entity, &mut PushForce, &mut PushForcePause), With<Player>>,
     mut collision_target_query: Query<(&RigidBody, &mut LinearVelocity)>,
-    mut damping_query: Query<&mut LinearDamping>,
     spatial_query: SpatialQuery,
     mut physics_time: ResMut<Time<Physics>>,
-    mut last_pushed: ResMut<LastPushedEntity>,
+    mut force_physics: ResMut<ForcePhysicsStep>
 ) {
     let (mut player_transform, player_speed, player_collider, player_entity, mut push_force, mut push_force_paused) = player_query.single_mut();
 
@@ -126,14 +127,6 @@ fn move_player(
 
             match shape_hit {
                 Some(hit) => {
-                    if last_pushed.0 != Some(hit.entity) {
-                        if let Some(old_entity) = last_pushed.0 {
-                            if let Ok(mut old_damping) = damping_query.get_mut(old_entity) {
-                                old_damping.0 = 0.9;
-                            }
-                        }
-                    }
-
                     let (body, mut velocity) = collision_target_query
                         .get_mut(hit.entity)
                         .expect("Missing Rigidbody component");
@@ -141,14 +134,11 @@ fn move_player(
                     let safe_movement = movement_direction * safe_distance;
                     match body {
                         RigidBody::Dynamic => {
-                            if let Ok(mut damping) = damping_query.get_mut(hit.entity) {
-                                damping.0 = 0.0;
-                            }
-                            last_pushed.0 = Some(hit.entity);
-
                             player_transform.translation += safe_movement.extend(0.0);
                             velocity.0 += movement_direction * player_speed.0 * push_force.0 * time.delta_secs();
-                            break;
+                            if !physics_time.is_paused() {
+                                force_physics.0 = true;
+                            }
                         }
                         _ => {
                             if safe_distance > COLLISION_EPSILON {
@@ -165,11 +155,6 @@ fn move_player(
                     }
                 }
                 None => {
-                    if let Some(entity) = last_pushed.0.take() {
-                        if let Ok((mut damping)) = damping_query.get_mut(entity) {
-                            damping.0 = 0.9;
-                        }
-                    }
                     player_transform.translation += raw_movement.extend(0.0);
                     break;
                 }
@@ -197,4 +182,14 @@ fn move_player(
             }
         }
     }
+}
+
+pub fn step_physics_if_needed(world: &mut World) {
+    world.resource_mut::<Time<Physics>>().advance_by(Duration::from_secs_f64(1.0/64.0));
+    world.run_schedule(PhysicsSchedule);
+    world.resource_mut::<ForcePhysicsStep>().0 = false;
+}
+
+fn force_physics(should_step_phyisics: Res<ForcePhysicsStep>) -> bool {
+    should_step_phyisics.0
 }
