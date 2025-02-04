@@ -6,30 +6,9 @@ use std::{os::linux::raw, time::Duration};
 pub struct PlayerPlugin;
 
 /* 
-TO DO:
+ISSUE:
 - dynamic rigidbodies with linear_damping feel jittery to push around,
-that's because we push them, and then catch up to them and push them again
-compared to having no linear_damping were they just move away from the player
-matching its speed. the solution is to add a system that keeps track of the objects
-being pushed and sets their linear damping to zero, and then once the player is no longer
-touching them it sets it back to their original value. It might be important for the push
-force to be related to the players speed, that way the system can be integrated with
-a weight system that also makes certain objects harder to push. Actually this is not a great solution,
-it means that the push_force should always be strong enough to get ahead of the player, I will keep
-push force at 2 so it is always ahead of the player and implement a simple system that keeps track
-of the last collision, if it is different than the current one then return LinearDamping and disable it
-on the current one. This works for a very specific push_force, so a more general solution might be
-to force a physics step after every dynamic collision (this is the only way I can think of to stop the jitter)
-/* 
-Objects with higher weight/friction may cause jittery pushing because:
-1. Player pushes and adds force
-2. Player moves again before next FixedUpdate
-3. Creates catch-up loop until FixedUpdate moves the object
-
-Two solutions:
-- Current: Zero friction during push + high enough force (2.0) to prevent catch-up
-- Future: Force physics step after push to ensure object moves before next player movement
-*/
+that's because we push them, and then catch up to them and push them again.
 */
 
 // offset to avoid floating-point precision errors in collision detection
@@ -56,15 +35,10 @@ struct PushForce(f32);
 #[derive(Component)]
 struct PushForcePause(f32);
 
-#[derive(Resource)]
-struct ForcePhysicsStep(bool);
-
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_player)
-            .add_systems(Update, move_player)
-            .add_systems(Update, step_physics_if_needed.run_if(force_physics).after(move_player))
-            .insert_resource(ForcePhysicsStep(false));
+            .add_systems(Update, move_player);
     }
 }
 
@@ -179,14 +153,4 @@ fn move_player(
             }
         }
     }
-}
-
-pub fn step_physics_if_needed(world: &mut World) {
-    world.resource_mut::<Time<Physics>>().advance_by(Duration::from_secs_f64(1.0/64.0));
-    world.run_schedule(PhysicsSchedule);
-    world.resource_mut::<ForcePhysicsStep>().0 = false;
-}
-
-fn force_physics(should_step_phyisics: Res<ForcePhysicsStep>) -> bool {
-    should_step_phyisics.0
 }
