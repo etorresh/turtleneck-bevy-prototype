@@ -111,13 +111,8 @@ fn move_player(
                             movement_direction = match slide_vector.try_normalize() {
                                 Some(dir) => dir,
                                 None => {
-                                    println!("breaking slide vector");
                                     break},
                             };
-                            println!(
-                                "Iteration: {:?}, Remaining Distance: {:?}, Slide Vector Length: {:?}",
-                                i, remaining_distance, slide_vector.length()
-                            );
                         }
                     }
                 }
