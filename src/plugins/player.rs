@@ -13,7 +13,22 @@ matching its speed. the solution is to add a system that keeps track of the obje
 being pushed and sets their linear damping to zero, and then once the player is no longer
 touching them it sets it back to their original value. It might be important for the push
 force to be related to the players speed, that way the system can be integrated with
-a weight system that also makes certain objects harder to push
+a weight system that also makes certain objects harder to push. Actually this is not a great solution,
+it means that the push_force should always be strong enough to get ahead of the player, I will keep
+push force at 2 so it is always ahead of the player and implement a simple system that keeps track
+of the last collision, if it is different than the current one then return LinearDamping and disable it
+on the current one. This works for a very specific push_force, so a more general solution might be
+to force a physics step after every dynamic collision (this is the only way I can think of to stop the jitter)
+/* 
+Objects with higher weight/friction may cause jittery pushing because:
+1. Player pushes and adds force
+2. Player moves again before next FixedUpdate
+3. Creates catch-up loop until FixedUpdate moves the object
+
+Two solutions:
+- Current: Zero friction during push + high enough force (2.0) to prevent catch-up
+- Future: Force physics step after push to ensure object moves before next player movement
+*/
 */
 
 // offset to avoid floating-point precision errors in collision detection
@@ -37,11 +52,17 @@ struct Speed(f32);
 
 #[derive(Component)]
 struct PushForce(f32);
+#[derive(Component)]
+struct PushForcePause(f32);
+
+#[derive(Resource, Default)]
+struct LastPushedEntity(Option<Entity>);
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_player)
-            .add_systems(Update, move_player);
+            .add_systems(Update, move_player)
+            .init_resource::<LastPushedEntity>();
     }
 }
 
@@ -59,19 +80,22 @@ fn spawn_player(
         RigidBody::Kinematic,
         Speed(3.0),
         CameraFocus,
-        PushForce(2.0)
+        PushForce(2.0),
+        PushForcePause(4.0),
     ));
 }
 
 fn move_player(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
-    mut player_query: Query<(&mut Transform, &Speed, &Collider, Entity, &mut PushForce), With<Player>>,
+    mut player_query: Query<(&mut Transform, &Speed, &Collider, Entity, &mut PushForce, &mut PushForcePause), With<Player>>,
     mut collision_target_query: Query<(&RigidBody, &mut LinearVelocity)>,
+    mut damping_query: Query<&mut LinearDamping>,
     spatial_query: SpatialQuery,
     mut physics_time: ResMut<Time<Physics>>,
+    mut last_pushed: ResMut<LastPushedEntity>,
 ) {
-    let (mut player_transform, player_speed, player_collider, player_entity, mut push_force) = player_query.single_mut();
+    let (mut player_transform, player_speed, player_collider, player_entity, mut push_force, mut push_force_paused) = player_query.single_mut();
 
     let direction = Vec2::new(
         (keys.pressed(KeyCode::KeyD) as i32 - keys.pressed(KeyCode::KeyA) as i32) as f32,
@@ -102,6 +126,14 @@ fn move_player(
 
             match shape_hit {
                 Some(hit) => {
+                    if last_pushed.0 != Some(hit.entity) {
+                        if let Some(old_entity) = last_pushed.0 {
+                            if let Ok(mut old_damping) = damping_query.get_mut(old_entity) {
+                                old_damping.0 = 0.9;
+                            }
+                        }
+                    }
+
                     let (body, mut velocity) = collision_target_query
                         .get_mut(hit.entity)
                         .expect("Missing Rigidbody component");
@@ -109,14 +141,13 @@ fn move_player(
                     let safe_movement = movement_direction * safe_distance;
                     match body {
                         RigidBody::Dynamic => {
-                            // using the hit.distance * movement_direction and slightly clipping into dynamic objects looks better BUT
-                            // it blocks movement if physics are paused (which will be a valid powerup for the player) so let's
-                            // use the safe_movement instead
-                            // we do not apply angular force because it makes pushing objects less predictable
+                            if let Ok(mut damping) = damping_query.get_mut(hit.entity) {
+                                damping.0 = 0.0;
+                            }
+                            last_pushed.0 = Some(hit.entity);
+
                             player_transform.translation += safe_movement.extend(0.0);
-                            let push_force =
-                                movement_direction * player_speed.0 * push_force.0 * time.delta_secs();
-                            velocity.0 += push_force;
+                            velocity.0 += movement_direction * player_speed.0 * push_force.0 * time.delta_secs();
                             break;
                         }
                         _ => {
@@ -134,6 +165,11 @@ fn move_player(
                     }
                 }
                 None => {
+                    if let Some(entity) = last_pushed.0.take() {
+                        if let Ok((mut damping)) = damping_query.get_mut(entity) {
+                            damping.0 = 0.9;
+                        }
+                    }
                     player_transform.translation += raw_movement.extend(0.0);
                     break;
                 }
@@ -151,13 +187,12 @@ fn move_player(
         }
         player_transform.translation.z = player_transform.translation.z.max(0.25);
 
+
         if keys.just_released(KeyCode::KeyH) {
-            let temp = push_force.0;
+            std::mem::swap(&mut push_force.0, &mut push_force_paused.0);
             if physics_time.is_paused() {
-                push_force.0 = temp;
                 physics_time.unpause();
             } else {
-                push_force.0 = 4.0;
                 physics_time.pause();
             }
         }
