@@ -65,8 +65,7 @@ fn move_player(
     if direction.length_squared() > 0.0 {
         let mut remaining_distance = player_speed.0 * time.delta_secs();
         let mut movement_direction = direction.normalize();
-        for i in 0..MAX_MOVEMENTS {
-            println!("{:?}", i);
+        for _ in 0..MAX_MOVEMENTS {
             // 0.0 instead of COLLISION_EPSILON to allow movement towards dynamic rigidbodies
             if remaining_distance <= 0.0 {
                 break;
