@@ -73,7 +73,7 @@ fn spawn_cube(
     // cube dynamic
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
-        MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
+        MeshMaterial3d(materials.add(Color::srgb_u8(0, 255, 0))),
         Transform::from_xyz(2.5, 0.0, 0.25),
         Collider::rectangle(0.5, 0.5),
         RigidBody::Dynamic,
@@ -85,7 +85,7 @@ fn spawn_cube(
     // cube static
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
-        MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
+        MeshMaterial3d(materials.add(Color::WHITE)),
         Transform::from_xyz(-2.5, 0.0, 0.25),
         Collider::rectangle(0.5, 0.5),
         RigidBody::Static,
@@ -93,7 +93,7 @@ fn spawn_cube(
     // cube static
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
-        MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
+        MeshMaterial3d(materials.add(Color::WHITE)),
         Transform::from_xyz(-3.0, 0.0, 0.25),
         Collider::rectangle(0.5, 0.5),
         RigidBody::Static,
@@ -101,7 +101,7 @@ fn spawn_cube(
     // cube static
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
-        MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
+        MeshMaterial3d(materials.add(Color::WHITE)),
         Transform::from_xyz(-3.0, 0.5, 0.25),
         Collider::rectangle(0.5, 0.5),
         RigidBody::Static,
@@ -110,7 +110,7 @@ fn spawn_cube(
     // cube static
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
-        MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
+        MeshMaterial3d(materials.add(Color::WHITE)),
         Transform::from_xyz(-3.0, 3.0, 0.25)
             .with_rotation(Quat::from_rotation_z(45_f32.to_radians())),
         Collider::rectangle(0.5, 0.5),

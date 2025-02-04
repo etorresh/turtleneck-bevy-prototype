@@ -8,6 +8,10 @@ pub struct PlayerPlugin;
 ISSUE:
 - dynamic rigidbodies with linear_damping feel jittery to push around,
 that's because we push them, and then catch up to them and push them again.
+There's no good solution for this, a DelayedLinearDamping might make it less noticeable,
+by keeping track of the entities the player interacted with and setting their lineardamping to
+0 and only returning it after a couple seconds where the player hasn't touched it.
+As a solution I can only move dynamic objects by shooting them
 */
 
 // offset to avoid floating-point precision errors in collision detection
@@ -28,11 +32,6 @@ struct Player;
 
 #[derive(Component)]
 struct Speed(f32);
-
-#[derive(Component)]
-struct PushForce(f32);
-#[derive(Component)]
-struct PushForcePause(f32);
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
@@ -55,20 +54,17 @@ fn spawn_player(
         RigidBody::Kinematic,
         Speed(3.0),
         CameraFocus,
-        PushForce(2.0),
-        PushForcePause(4.0),
     ));
 }
 
 fn move_player(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
-    mut player_query: Query<(&mut Transform, &Speed, &Collider, Entity, &mut PushForce, &mut PushForcePause), With<Player>>,
-    mut collision_target_query: Query<(&RigidBody, &mut LinearVelocity)>,
+    mut player_query: Query<(&mut Transform, &Speed, &Collider, Entity), With<Player>>,
     spatial_query: SpatialQuery,
     mut physics_time: ResMut<Time<Physics>>,
 ) {
-    let (mut player_transform, player_speed, player_collider, player_entity, mut push_force, mut push_force_paused) = player_query.single_mut();
+    let (mut player_transform, player_speed, player_collider, player_entity) = player_query.single_mut();
 
     let direction = Vec2::new(
         (keys.pressed(KeyCode::KeyD) as i32 - keys.pressed(KeyCode::KeyA) as i32) as f32,
@@ -99,30 +95,17 @@ fn move_player(
 
             match shape_hit {
                 Some(hit) => {
-                    let (body, mut velocity) = collision_target_query
-                        .get_mut(hit.entity)
-                        .expect("Missing Rigidbody component");
                     let safe_distance = (hit.distance - COLLISION_EPSILON).max(0.0);
                     let safe_movement = movement_direction * safe_distance;
-                    match body {
-                        RigidBody::Dynamic => {
-                            player_transform.translation += safe_movement.extend(0.0);
-                            velocity.0 += movement_direction * player_speed.0 * push_force.0 * time.delta_secs();
-                            break;
-                        }
-                        _ => {
-                            if safe_distance > COLLISION_EPSILON {
-                                player_transform.translation += (safe_movement).extend(0.0);
-                                remaining_distance -= safe_distance;
-                            }
-                            let slide_vector = raw_movement - hit.normal1 * raw_movement.dot(hit.normal1);
-                            movement_direction = match slide_vector.try_normalize() {
-                                Some(dir) => dir,
-                                None => {
-                                    break},
-                            };
-                        }
+                    if safe_distance > COLLISION_EPSILON {
+                        player_transform.translation += (safe_movement).extend(0.0);
+                        remaining_distance -= safe_distance;
                     }
+                    let slide_vector = raw_movement - hit.normal1 * raw_movement.dot(hit.normal1);
+                    movement_direction = match slide_vector.try_normalize() {
+                        Some(dir) => dir,
+                        None => {break},
+                    };
                 }
                 None => {
                     player_transform.translation += raw_movement.extend(0.0);
@@ -144,7 +127,6 @@ fn move_player(
 
 
         if keys.just_released(KeyCode::KeyH) {
-            std::mem::swap(&mut push_force.0, &mut push_force_paused.0);
             if physics_time.is_paused() {
                 physics_time.unpause();
             } else {
