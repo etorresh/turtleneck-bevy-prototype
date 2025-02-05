@@ -44,7 +44,7 @@ fn handle_shooting(
                         Collider::circle(0.1),
                         Bullet {
                             velocity: to_mouse * 10.0,
-                            push_force: 5.0
+                            push_force: 2.0
                         },
                         CollisionLayers::new(GameLayer::PlayerBullet, GameLayer::Default),
                     ));
@@ -62,10 +62,36 @@ struct Bullet {
 
 // Add system to move bullets
 fn move_bullets(
-    mut bullets: Query<(&mut Transform, &Bullet)>,
+    mut commands: Commands,
     time: Res<Time>,
+    mut bullets: Query<(Entity, &mut Transform, &Bullet, &Collider)>,
+    mut rigid_bodies: Query<(&RigidBody, &mut LinearVelocity)>,
+    spatial_query: SpatialQuery,
+    player_query: Query<Entity, With<Player>>,
 ) {
-    for (mut transform, bullet) in &mut bullets {
-        transform.translation += bullet.velocity.extend(0.0) * time.delta_secs();
+    let player_entity = player_query.single();
+
+    for (bullet_entity, mut transform, bullet, collider) in &mut bullets {
+        // Move first
+        let movement = bullet.velocity * time.delta_secs();
+        transform.translation += movement.extend(0.0);
+        
+        // Then check for collision at new position
+        if let Some(hit) = spatial_query.cast_shape(
+            collider,
+            Vec2::new(transform.translation.x, transform.translation.y),
+            0.0,
+            Dir2::new_unchecked(bullet.velocity.normalize()),
+            &ShapeCastConfig::from_max_distance(0.1), // Small distance check
+            &SpatialQueryFilter::from_mask(GameLayer::Default)
+                .with_excluded_entities([player_entity]),
+        ) {
+            if let Ok((body, mut velocity)) = rigid_bodies.get_mut(hit.entity) {
+                if matches!(body, RigidBody::Dynamic) {
+                    velocity.0 += bullet.velocity.normalize() * bullet.push_force;
+                }
+            }
+            commands.entity(bullet_entity).despawn();
+        }
     }
 }
