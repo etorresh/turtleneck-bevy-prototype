@@ -2,6 +2,9 @@ use crate::components::camera::CameraFocus;
 use avian2d::{math::Vector, prelude::*};
 use bevy::{prelude::*, render::view::RenderLayers};
 use core::f32;
+use crate::components::player::{Player, PlayerSet};
+use crate::components::gamelayer::GameLayer;
+
 pub struct PlayerPlugin;
 
 // offset to avoid floating-point precision errors in collision detection
@@ -17,8 +20,6 @@ const COLLISION_EPSILON: f32 = f32::EPSILON * 80_000.0;
 // I lean towards keeping it at 2 because values greater than 2 jitter when colliding with sharp colliders
 const MAX_MOVEMENTS: u8 = 2;
 
-#[derive(Component)]
-struct Player;
 
 #[derive(Component)]
 struct Speed(f32);
@@ -26,7 +27,7 @@ struct Speed(f32);
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_player)
-            .add_systems(Update, move_player);
+            .add_systems(Update, move_player.in_set(PlayerSet::Movement));
     }
 }
 
@@ -101,7 +102,7 @@ fn move_player(
                 player_transform.rotation.to_euler(EulerRot::XYZ).2,
                 Dir2::new_unchecked(movement_direction),
                 &ShapeCastConfig::from_max_distance(remaining_distance),
-                &SpatialQueryFilter::default().with_excluded_entities([player_entity]),
+                &SpatialQueryFilter::from_mask(GameLayer::Default).with_excluded_entities([player_entity]),
             );
 
             match shape_hit {

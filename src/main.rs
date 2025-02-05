@@ -3,7 +3,7 @@ use bevy::prelude::*;
 mod components;
 mod plugins;
 
-use plugins::{camera::CameraPlugin, player::PlayerPlugin, world::WorldPlugin};
+use plugins::{camera::CameraPlugin, player::PlayerPlugin, world::WorldPlugin, shooting::ShootingPlugin};
 fn main() {
     App::new()
         .add_plugins((
@@ -12,6 +12,7 @@ fn main() {
             PlayerPlugin,
             CameraPlugin,
             WorldPlugin,
+            ShootingPlugin
         ))
         .insert_resource(Gravity(Vec2::ZERO))
         .run();
