@@ -1,6 +1,6 @@
+use crate::components::{enemy::Enemy, health::Health};
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use crate::components::{enemy::Enemy, health::Health};
 
 const GRID_SIZE: f32 = 16.0; // Size of the world in units
 const WALL_THICKNESS: f32 = 0.5;
@@ -29,28 +29,28 @@ fn spawn_floor(
     commands.spawn((
         RigidBody::Static,
         Collider::rectangle(GRID_SIZE, WALL_THICKNESS),
-        Transform::from_xyz(0.0, GRID_SIZE/2.0 + WALL_THICKNESS / 2.0, 0.0),
+        Transform::from_xyz(0.0, GRID_SIZE / 2.0 + WALL_THICKNESS / 2.0, 0.0),
     ));
 
     // Bottom wall
     commands.spawn((
         RigidBody::Static,
         Collider::rectangle(GRID_SIZE, WALL_THICKNESS),
-        Transform::from_xyz(0.0, -GRID_SIZE/2.0 - WALL_THICKNESS / 2.0, 0.0),
+        Transform::from_xyz(0.0, -GRID_SIZE / 2.0 - WALL_THICKNESS / 2.0, 0.0),
     ));
 
     // Left wall
     commands.spawn((
         RigidBody::Static,
         Collider::rectangle(WALL_THICKNESS, GRID_SIZE),
-        Transform::from_xyz(-GRID_SIZE/2.0 - WALL_THICKNESS / 2.0, 0.0, 0.0),
+        Transform::from_xyz(-GRID_SIZE / 2.0 - WALL_THICKNESS / 2.0, 0.0, 0.0),
     ));
 
     // Right wall
     commands.spawn((
         RigidBody::Static,
         Collider::rectangle(WALL_THICKNESS, GRID_SIZE),
-        Transform::from_xyz(GRID_SIZE/2.0 + WALL_THICKNESS / 2.0, 0.0, 0.0),
+        Transform::from_xyz(GRID_SIZE / 2.0 + WALL_THICKNESS / 2.0, 0.0, 0.0),
     ));
 }
 
@@ -62,7 +62,7 @@ fn spawn_light(mut commands: Commands) {
             range: GRID_SIZE,
             ..default()
         },
-        Transform::from_xyz(0.0, 0.0,8.0).looking_at(Vec3::ZERO, Vec3::Z),
+        Transform::from_xyz(0.0, 0.0, 8.0).looking_at(Vec3::ZERO, Vec3::Z),
     ));
 }
 
@@ -80,7 +80,8 @@ fn spawn_cube(
         RigidBody::Dynamic,
         TransformInterpolation,
         LinearDamping(0.9),
-        AngularDamping(0.9)
+        AngularDamping(0.9),
+        Name::new("Dynamic Cube"),
     ));
 
     // cube enemy
@@ -95,6 +96,7 @@ fn spawn_cube(
         AngularDamping(0.9),
         Enemy,
         Health(2),
+        Name::new("Enemy"),
     ));
 
     // cube static

@@ -1,18 +1,26 @@
-use std::thread::current;
-
-use avian2d::prelude::*;
-use bevy::prelude::*;
 use crate::components::enemy::Enemy;
+use crate::components::gamelayer::GameLayer;
 use crate::components::health::Health;
 use crate::components::player::Player;
-use crate::components::gamelayer::GameLayer;
+use avian2d::prelude::*;
+use bevy::prelude::*;
 
 pub struct ShootingPlugin;
 
 impl Plugin for ShootingPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (handle_shooting, move_bullets));
+        app.add_systems(
+            Update,
+            (handle_shooting, move_bullets, handle_bullet_collisions).chain(),
+        );
     }
+}
+
+#[derive(Component)]
+struct Bullet {
+    direction: Dir2,
+    speed: f32,
+    push_force: f32,
 }
 
 fn handle_shooting(
@@ -27,19 +35,22 @@ fn handle_shooting(
     if mouse.just_pressed(MouseButton::Left) {
         if let Some(cursor_pos) = windows.single().cursor_position() {
             let (camera, camera_transform) = camera.single();
-            
+
             if let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_pos) {
                 let player_transform = player_query.single();
                 // Find intersection with plane at player's Z height
                 let t = (player_transform.translation.z - ray.origin.z) / ray.direction.z;
-                
+
                 if t >= 0.0 {
                     let point = ray.get_point(t);
                     // Get direction from player to mouse point
-                    let to_mouse = (Vec2::new(point.x, point.y) - 
-                                  Vec2::new(player_transform.translation.x, 
-                                          player_transform.translation.y)).normalize();
-                    
+                    let to_mouse = (Vec2::new(point.x, point.y)
+                        - Vec2::new(
+                            player_transform.translation.x,
+                            player_transform.translation.y,
+                        ))
+                    .normalize();
+
                     // Spawn bullet with velocity in that direction
                     commands.spawn((
                         Mesh3d(meshes.add(Sphere::new(0.1))),
@@ -53,7 +64,7 @@ fn handle_shooting(
                         Bullet {
                             direction: Dir2::new_unchecked(to_mouse),
                             speed: 10.0,
-                            push_force: 2.0
+                            push_force: 2.0,
                         },
                         CollisionLayers::new(GameLayer::PlayerBullet, GameLayer::Default),
                     ));
@@ -63,17 +74,16 @@ fn handle_shooting(
     }
 }
 
-#[derive(Component)]
-struct Bullet {
-    direction: Dir2,
-    speed: f32,
-    push_force: f32,
+fn move_bullets(time: Res<Time>, mut bullets: Query<(&mut Transform, &mut Bullet)>) {
+    for (mut transform, mut bullet) in &mut bullets {
+        bullet.speed *= 1.0 + time.delta_secs() * 6.0;
+        let movement = bullet.direction * bullet.speed * time.delta_secs();
+        transform.translation += movement.extend(0.0);
+    }
 }
 
-// Add system to move bullets
-fn move_bullets(
+fn handle_bullet_collisions(
     mut commands: Commands,
-    time: Res<Time>,
     mut bullets: Query<(Entity, &mut Transform, &mut Bullet, &Collider)>,
     mut rigid_bodies: Query<(&RigidBody, &mut LinearVelocity)>,
     mut query_enemy: Query<&mut Health, With<Enemy>>,
@@ -82,12 +92,7 @@ fn move_bullets(
 ) {
     let player_entity = player_query.single();
 
-    for (bullet_entity, mut transform, mut bullet, collider) in &mut bullets {
-        // Move bullet first
-        bullet.speed *= 1.0 + time.delta_secs() * 6.0;
-        let movement = bullet.direction * bullet.speed * time.delta_secs();
-        transform.translation += movement.extend(0.0);
-        
+    for (bullet_entity, transform, bullet, collider) in &mut bullets {
         // Then check for collision at new position
         if let Some(hit) = spatial_query.cast_shape(
             collider,
@@ -106,8 +111,7 @@ fn move_bullets(
             if let Ok(mut health) = query_enemy.get_mut(hit.entity) {
                 if let Some(new_health) = health.0.checked_sub(1) {
                     health.0 = new_health;
-                }
-                else {
+                } else {
                     commands.entity(hit.entity).despawn();
                 }
             }

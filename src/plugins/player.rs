@@ -1,9 +1,9 @@
 use crate::components::camera::CameraFocus;
+use crate::components::gamelayer::GameLayer;
+use crate::components::player::{Player, PlayerSet};
 use avian2d::{math::Vector, prelude::*};
 use bevy::{prelude::*, render::view::RenderLayers};
 use core::f32;
-use crate::components::player::{Player, PlayerSet};
-use crate::components::gamelayer::GameLayer;
 
 pub struct PlayerPlugin;
 
@@ -14,12 +14,11 @@ pub struct PlayerPlugin;
 // but this would prevent getting as close to static objects since you're limited by
 // your own speed (if you're able to travel further than the distance to the static object then you won't move at all)
 const COLLISION_EPSILON: f32 = f32::EPSILON * 80_000.0;
-// 2 iterations are enough to resolve corner cases: 
+// 2 iterations are enough to resolve corner cases:
 // 1st handles the first wall, 2nd resolves the second wall (if in a corner)
 // A 3rd iteration isn't needed, as movement becomes negligible (this might change if the player speed changes)
 // I lean towards keeping it at 2 because values greater than 2 jitter when colliding with sharp colliders
 const MAX_MOVEMENTS: u8 = 2;
-
 
 #[derive(Component)]
 struct Speed(f32);
@@ -45,6 +44,7 @@ fn spawn_player(
         RigidBody::Kinematic,
         Speed(3.0),
         CameraFocus,
+        Name::new("Player"),
     ));
 }
 
@@ -55,9 +55,10 @@ fn move_player(
     spatial_query: SpatialQuery,
     mut physics_time: ResMut<Time<Physics>>,
     windows: Query<&Window>,
-    camera: Query<(&Camera, &GlobalTransform)>
+    camera: Query<(&Camera, &GlobalTransform)>,
 ) {
-    let (mut player_transform, player_speed, player_collider, player_entity) = player_query.single_mut();
+    let (mut player_transform, player_speed, player_collider, player_entity) =
+        player_query.single_mut();
 
     // rotate to face mouse
     if let Some(cursor_pos) = windows.single().cursor_position() {
@@ -65,11 +66,15 @@ fn move_player(
 
         if let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_pos) {
             let t = (player_transform.translation.z - ray.origin.z) / ray.direction.z;
-    
+
             // If t is negative, the intersection is behind the camera
             if t >= 0.0 {
                 let point = ray.get_point(t);
-                let to_cursor = (Vec2::new(point.x, point.y) - Vec2::new(player_transform.translation.x, player_transform.translation.y));
+                let to_cursor = (Vec2::new(point.x, point.y)
+                    - Vec2::new(
+                        player_transform.translation.x,
+                        player_transform.translation.y,
+                    ));
                 // Calculate angle in XY plane
                 let angle = to_cursor.y.atan2(to_cursor.x);
                 // Rotate only around Z axis
@@ -102,7 +107,8 @@ fn move_player(
                 player_transform.rotation.to_euler(EulerRot::XYZ).2,
                 Dir2::new_unchecked(movement_direction),
                 &ShapeCastConfig::from_max_distance(remaining_distance),
-                &SpatialQueryFilter::from_mask(GameLayer::Default).with_excluded_entities([player_entity]),
+                &SpatialQueryFilter::from_mask(GameLayer::Default)
+                    .with_excluded_entities([player_entity]),
             );
 
             match shape_hit {
@@ -116,7 +122,7 @@ fn move_player(
                     let slide_vector = raw_movement - hit.normal1 * raw_movement.dot(hit.normal1);
                     movement_direction = match slide_vector.try_normalize() {
                         Some(dir) => dir,
-                        None => {break},
+                        None => break,
                     };
                 }
                 None => {
@@ -140,9 +146,6 @@ fn move_player(
             }
             player_transform.translation.z = player_transform.translation.z.max(0.25);
         }
-
-        
-
 
         if keys.just_released(KeyCode::KeyH) {
             if physics_time.is_paused() {

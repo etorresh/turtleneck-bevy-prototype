@@ -1,8 +1,8 @@
 use avian2d::prelude::*;
 
 #[derive(PhysicsLayer, Clone, Copy, Debug, Default)]
-pub enum GameLayer{
+pub enum GameLayer {
     #[default]
     Default,
-    PlayerBullet
+    PlayerBullet,
 }

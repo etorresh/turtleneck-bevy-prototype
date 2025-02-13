@@ -3,7 +3,13 @@ use bevy::{prelude::*, window::WindowResolution};
 mod components;
 mod plugins;
 
-use plugins::{camera::CameraPlugin, player::PlayerPlugin, world::WorldPlugin, shooting::ShootingPlugin};
+use plugins::{
+    camera::CameraPlugin, player::PlayerPlugin, shooting::ShootingPlugin, world::WorldPlugin,
+};
+
+use bevy_inspector_egui::prelude::*;
+use bevy_inspector_egui::quick::{ResourceInspectorPlugin, WorldInspectorPlugin};
+
 fn main() {
     App::new()
         .add_plugins((
@@ -19,7 +25,9 @@ fn main() {
             PlayerPlugin,
             CameraPlugin,
             WorldPlugin,
-            ShootingPlugin
+            ShootingPlugin,
+            // Inspector
+            WorldInspectorPlugin::new(),
         ))
         .insert_resource(Gravity(Vec2::ZERO))
         .run();
