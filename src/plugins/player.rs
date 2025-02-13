@@ -2,7 +2,7 @@ use crate::components::camera::CameraFocus;
 use crate::components::gamelayer::GameLayer;
 use crate::components::player::{Player, PlayerSet};
 use avian2d::{math::Vector, prelude::*};
-use bevy::{prelude::*, render::view::RenderLayers};
+use bevy::prelude::*;
 use core::f32;
 
 pub struct PlayerPlugin;

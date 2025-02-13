@@ -9,18 +9,37 @@ pub struct ShootingPlugin;
 
 impl Plugin for ShootingPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (handle_shooting, move_bullets, handle_bullet_collisions).chain(),
-        );
+        app.init_resource::<GunConfig>()
+            .add_systems(
+                Update,
+                (handle_shooting, move_bullets, handle_bullet_collisions).chain(),
+            )
+            .register_type::<GunConfig>();
+    }
+}
+
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
+pub struct GunConfig {
+    starting_speed: f32,
+    acceleration: f32,
+    push_force: f32,
+}
+
+impl Default for GunConfig {
+    fn default() -> Self {
+        Self {
+            starting_speed: 10.0,
+            acceleration: 6.0,
+            push_force: 2.0,
+        }
     }
 }
 
 #[derive(Component)]
 struct Bullet {
     direction: Dir2,
-    speed: f32,
-    push_force: f32,
+    current_speed: f32,
 }
 
 fn handle_shooting(
@@ -31,6 +50,7 @@ fn handle_shooting(
     player_query: Query<&Transform, With<Player>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    gun_config: Res<GunConfig>,
 ) {
     if mouse.just_pressed(MouseButton::Left) {
         if let Some(cursor_pos) = windows.single().cursor_position() {
@@ -63,8 +83,7 @@ fn handle_shooting(
                         Collider::circle(0.1),
                         Bullet {
                             direction: Dir2::new_unchecked(to_mouse),
-                            speed: 10.0,
-                            push_force: 2.0,
+                            current_speed: gun_config.starting_speed,
                         },
                         CollisionLayers::new(GameLayer::PlayerBullet, GameLayer::Default),
                     ));
@@ -74,10 +93,14 @@ fn handle_shooting(
     }
 }
 
-fn move_bullets(time: Res<Time>, mut bullets: Query<(&mut Transform, &mut Bullet)>) {
+fn move_bullets(
+    time: Res<Time>,
+    mut bullets: Query<(&mut Transform, &mut Bullet)>,
+    gun_config: Res<GunConfig>,
+) {
     for (mut transform, mut bullet) in &mut bullets {
-        bullet.speed *= 1.0 + time.delta_secs() * 6.0;
-        let movement = bullet.direction * bullet.speed * time.delta_secs();
+        bullet.current_speed *= 1.0 + time.delta_secs() * gun_config.acceleration;
+        let movement = bullet.direction * bullet.current_speed * time.delta_secs();
         transform.translation += movement.extend(0.0);
     }
 }
@@ -89,6 +112,7 @@ fn handle_bullet_collisions(
     mut query_enemy: Query<&mut Health, With<Enemy>>,
     spatial_query: SpatialQuery,
     player_query: Query<Entity, With<Player>>,
+    gun_config: Res<GunConfig>,
 ) {
     let player_entity = player_query.single();
 
@@ -105,7 +129,7 @@ fn handle_bullet_collisions(
         ) {
             if let Ok((body, mut velocity)) = rigid_bodies.get_mut(hit.entity) {
                 if matches!(body, RigidBody::Dynamic) {
-                    velocity.0 += bullet.direction * bullet.push_force;
+                    velocity.0 += bullet.direction * gun_config.push_force;
                 }
             }
             if let Ok(mut health) = query_enemy.get_mut(hit.entity) {
