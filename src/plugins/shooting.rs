@@ -1,3 +1,5 @@
+use std::thread::current;
+
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use crate::components::enemy::Enemy;
@@ -49,7 +51,8 @@ fn handle_shooting(
                         Transform::from_translation(player_transform.translation),
                         Collider::circle(0.1),
                         Bullet {
-                            velocity: to_mouse * 10.0,
+                            direction: Dir2::new_unchecked(to_mouse),
+                            speed: 10.0,
                             push_force: 2.0
                         },
                         CollisionLayers::new(GameLayer::PlayerBullet, GameLayer::Default),
@@ -62,7 +65,8 @@ fn handle_shooting(
 
 #[derive(Component)]
 struct Bullet {
-    velocity: Vec2,
+    direction: Dir2,
+    speed: f32,
     push_force: f32,
 }
 
@@ -70,7 +74,7 @@ struct Bullet {
 fn move_bullets(
     mut commands: Commands,
     time: Res<Time>,
-    mut bullets: Query<(Entity, &mut Transform, &Bullet, &Collider)>,
+    mut bullets: Query<(Entity, &mut Transform, &mut Bullet, &Collider)>,
     mut rigid_bodies: Query<(&RigidBody, &mut LinearVelocity)>,
     mut query_enemy: Query<&mut Health, With<Enemy>>,
     spatial_query: SpatialQuery,
@@ -78,9 +82,9 @@ fn move_bullets(
 ) {
     let player_entity = player_query.single();
 
-    for (bullet_entity, mut transform, bullet, collider) in &mut bullets {
-        // Move first
-        let movement = bullet.velocity * time.delta_secs();
+    for (bullet_entity, mut transform, mut bullet, collider) in &mut bullets {
+        // Move bullet first
+        let movement = bullet.direction * bullet.speed * time.delta_secs();
         transform.translation += movement.extend(0.0);
         
         // Then check for collision at new position
@@ -88,14 +92,14 @@ fn move_bullets(
             collider,
             Vec2::new(transform.translation.x, transform.translation.y),
             0.0,
-            Dir2::new_unchecked(bullet.velocity.normalize()),
+            bullet.direction,
             &ShapeCastConfig::from_max_distance(0.001), // Small distance check
             &SpatialQueryFilter::from_mask(GameLayer::Default)
                 .with_excluded_entities([player_entity]),
         ) {
             if let Ok((body, mut velocity)) = rigid_bodies.get_mut(hit.entity) {
                 if matches!(body, RigidBody::Dynamic) {
-                    velocity.0 += bullet.velocity.normalize() * bullet.push_force;
+                    velocity.0 += bullet.direction * bullet.push_force;
                 }
             }
             if let Ok(mut health) = query_enemy.get_mut(hit.entity) {
