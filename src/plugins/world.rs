@@ -1,5 +1,6 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use crate::components::{enemy::Enemy, health::Health};
 
 const GRID_SIZE: f32 = 16.0; // Size of the world in units
 const WALL_THICKNESS: f32 = 0.5;
@@ -80,6 +81,20 @@ fn spawn_cube(
         TransformInterpolation,
         LinearDamping(0.9),
         AngularDamping(0.9)
+    ));
+
+    // cube enemy
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
+        MeshMaterial3d(materials.add(Color::srgb_u8(255, 0, 0))),
+        Transform::from_xyz(0.0, 2.5, 0.25),
+        Collider::rectangle(0.5, 0.5),
+        RigidBody::Dynamic,
+        TransformInterpolation,
+        LinearDamping(0.9),
+        AngularDamping(0.9),
+        Enemy,
+        Health(2),
     ));
 
     // cube static

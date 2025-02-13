@@ -1,5 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use crate::components::enemy::Enemy;
+use crate::components::health::Health;
 use crate::components::player::Player;
 use crate::components::gamelayer::GameLayer;
 
@@ -39,7 +41,11 @@ fn handle_shooting(
                     // Spawn bullet with velocity in that direction
                     commands.spawn((
                         Mesh3d(meshes.add(Sphere::new(0.1))),
-                        MeshMaterial3d(materials.add(Color::srgb(1.0, 0.0, 0.0))),
+                        MeshMaterial3d(materials.add(StandardMaterial {
+                            base_color: Color::srgb(1.0, 0.0, 0.0),
+                            emissive: LinearRgba::new(10000., 0., 0., 0.),
+                            ..default()
+                        })),
                         Transform::from_translation(player_transform.translation),
                         Collider::circle(0.1),
                         Bullet {
@@ -66,6 +72,7 @@ fn move_bullets(
     time: Res<Time>,
     mut bullets: Query<(Entity, &mut Transform, &Bullet, &Collider)>,
     mut rigid_bodies: Query<(&RigidBody, &mut LinearVelocity)>,
+    mut query_enemy: Query<&mut Health, With<Enemy>>,
     spatial_query: SpatialQuery,
     player_query: Query<Entity, With<Player>>,
 ) {
@@ -82,13 +89,21 @@ fn move_bullets(
             Vec2::new(transform.translation.x, transform.translation.y),
             0.0,
             Dir2::new_unchecked(bullet.velocity.normalize()),
-            &ShapeCastConfig::from_max_distance(0.1), // Small distance check
+            &ShapeCastConfig::from_max_distance(0.001), // Small distance check
             &SpatialQueryFilter::from_mask(GameLayer::Default)
                 .with_excluded_entities([player_entity]),
         ) {
             if let Ok((body, mut velocity)) = rigid_bodies.get_mut(hit.entity) {
                 if matches!(body, RigidBody::Dynamic) {
                     velocity.0 += bullet.velocity.normalize() * bullet.push_force;
+                }
+            }
+            if let Ok(mut health) = query_enemy.get_mut(hit.entity) {
+                if let Some(new_health) = health.0.checked_sub(1) {
+                    health.0 = new_health;
+                }
+                else {
+                    commands.entity(hit.entity).despawn();
                 }
             }
             commands.entity(bullet_entity).despawn();
