@@ -84,6 +84,7 @@ fn move_bullets(
 
     for (bullet_entity, mut transform, mut bullet, collider) in &mut bullets {
         // Move bullet first
+        bullet.speed *= 1.0 + time.delta_secs() * 6.0;
         let movement = bullet.direction * bullet.speed * time.delta_secs();
         transform.translation += movement.extend(0.0);
         
