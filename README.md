@@ -1,12 +1,5 @@
 # Turlteneck
 
-compile optimization:
-- Bevy is dynamically linked (go back to staticly on production)
-- using clang llvm linker
-- generic sharing with nightly
+Prototype game built with Bevy + Avian Physics. Custom player controller, time-stop mechanics.
 
-Camera is Z-up because it makes 2.5D top-down easier.
-
-I want the player controller to be able to interact with dynamic rigidbodies.
-- Use physics based movement (it feeels unresponsive and slidy)
-- Move Player position directly, and check for collisions, and limit the movement to right before the collision, thje problem with this is that it doesn't allow the player to interact with dynamic rigidbodies since it will always stop right before colliding with them, could I fix this by having the player go slightly into the dynamic bodies? Micro-Penetration for Dynamic Objects. My real life event-loop also runs that system every FixedUpdate.a
+![PauseTimeClip(1)](https://github.com/user-attachments/assets/687934ed-2e9b-43a9-b79f-377e59a9e88a)
