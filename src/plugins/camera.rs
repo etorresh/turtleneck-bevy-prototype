@@ -33,7 +33,7 @@ fn focus_camera(
     mut camera_query: Query<&mut Transform, (With<Camera>, Without<CameraFocus>)>,
     subject_query: Query<&Transform, With<CameraFocus>>,
 ) {
-    let mut camera_transform = camera_query.single_mut();
+    let mut camera_transform = camera_query.single_mut().unwrap();
 
     let mut focus_points = Vec::new();
     for transform in subject_query.iter() {

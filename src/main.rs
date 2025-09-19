@@ -6,9 +6,6 @@ mod plugins;
 use plugins::{
     camera::CameraPlugin, player::PlayerPlugin, shooting::ShootingPlugin, world::WorldPlugin,
 };
-
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
-
 fn main() {
     App::new()
         .add_plugins((
@@ -26,7 +23,8 @@ fn main() {
             WorldPlugin,
             ShootingPlugin,
             // Inspector
-            WorldInspectorPlugin::new(),
+            // EguiPlugin::default(),
+            // WorldInspectorPlugin::new(),
         ))
         .insert_resource(Gravity(Vec2::ZERO))
         .run();

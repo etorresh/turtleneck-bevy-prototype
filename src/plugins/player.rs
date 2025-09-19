@@ -58,11 +58,11 @@ fn move_player(
     camera: Query<(&Camera, &GlobalTransform)>,
 ) {
     let (mut player_transform, player_speed, player_collider, player_entity) =
-        player_query.single_mut();
+        player_query.single_mut().unwrap();
 
     // rotate to face mouse
-    if let Some(cursor_pos) = windows.single().cursor_position() {
-        let (camera, camera_transform) = camera.single();
+    if let Some(cursor_pos) = windows.single().unwrap().cursor_position() {
+        let (camera, camera_transform) = camera.single().unwrap();
 
         if let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_pos) {
             let t = (player_transform.translation.z - ray.origin.z) / ray.direction.z;

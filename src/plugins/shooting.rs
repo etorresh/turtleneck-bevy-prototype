@@ -53,11 +53,11 @@ fn handle_shooting(
     gun_config: Res<GunConfig>,
 ) {
     if mouse.just_pressed(MouseButton::Left) {
-        if let Some(cursor_pos) = windows.single().cursor_position() {
-            let (camera, camera_transform) = camera.single();
+        if let Some(cursor_pos) = windows.single().unwrap().cursor_position() {
+            let (camera, camera_transform) = camera.single().unwrap();
 
             if let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_pos) {
-                let player_transform = player_query.single();
+                let player_transform = player_query.single().unwrap();
                 // Find intersection with plane at player's Z height
                 let t = (player_transform.translation.z - ray.origin.z) / ray.direction.z;
 
@@ -114,7 +114,7 @@ fn handle_bullet_collisions(
     player_query: Query<Entity, With<Player>>,
     gun_config: Res<GunConfig>,
 ) {
-    let player_entity = player_query.single();
+    let player_entity = player_query.single().unwrap();
 
     for (bullet_entity, transform, bullet, collider) in &mut bullets {
         // Then check for collision at new position
