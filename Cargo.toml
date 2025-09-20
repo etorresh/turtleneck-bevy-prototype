@@ -6,8 +6,8 @@ edition = "2024"
 [dependencies]
 bevy = { version = "0.16", features = ["dynamic_linking"] }
 log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
-avian2d = {version = "0.3"}
-bevy-inspector-egui = "0.33"
+avian3d = {version = "0.3"}
+bevy-inspector-egui = {version = "0.33"}
 
 [profile.dev]
 opt-level = 1

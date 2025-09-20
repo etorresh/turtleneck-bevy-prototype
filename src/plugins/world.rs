@@ -1,9 +1,7 @@
-use crate::components::{enemy::Enemy, health::Health};
-use avian2d::prelude::*;
+use crate::components::{enemy::Enemy, gamelayer::GameLayer, health::Health};
+use avian3d::prelude::*;
 use bevy::prelude::*;
 
-const GRID_SIZE: f32 = 16.0; // Size of the world in units
-const WALL_THICKNESS: f32 = 0.5;
 pub struct WorldPlugin;
 
 impl Plugin for WorldPlugin {
@@ -17,52 +15,23 @@ fn spawn_floor(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // Existing floor
     commands.spawn((
-        Mesh3d(meshes.add(Cuboid::new(GRID_SIZE, GRID_SIZE, 1.0))),
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(12.0, 12.0))),
         MeshMaterial3d(materials.add(Color::WHITE)),
-        Transform::from_xyz(0.0, 0.0, -0.5),
-    ));
-
-    // Spawn boundary colliders
-    // Top wall
-    commands.spawn((
+        Collider::cuboid(12., 0.0, 12.),
         RigidBody::Static,
-        Collider::rectangle(GRID_SIZE, WALL_THICKNESS),
-        Transform::from_xyz(0.0, GRID_SIZE / 2.0 + WALL_THICKNESS / 2.0, 0.0),
-    ));
-
-    // Bottom wall
-    commands.spawn((
-        RigidBody::Static,
-        Collider::rectangle(GRID_SIZE, WALL_THICKNESS),
-        Transform::from_xyz(0.0, -GRID_SIZE / 2.0 - WALL_THICKNESS / 2.0, 0.0),
-    ));
-
-    // Left wall
-    commands.spawn((
-        RigidBody::Static,
-        Collider::rectangle(WALL_THICKNESS, GRID_SIZE),
-        Transform::from_xyz(-GRID_SIZE / 2.0 - WALL_THICKNESS / 2.0, 0.0, 0.0),
-    ));
-
-    // Right wall
-    commands.spawn((
-        RigidBody::Static,
-        Collider::rectangle(WALL_THICKNESS, GRID_SIZE),
-        Transform::from_xyz(GRID_SIZE / 2.0 + WALL_THICKNESS / 2.0, 0.0, 0.0),
+        CollisionLayers::new(GameLayer::Floor, GameLayer::Default),
     ));
 }
 
 fn spawn_light(mut commands: Commands) {
-    // light
+    // Light above the scene
     commands.spawn((
         PointLight {
             shadows_enabled: true,
-            range: GRID_SIZE,
             ..default()
         },
-        Transform::from_xyz(0.0, 0.0, 8.0).looking_at(Vec3::ZERO, Vec3::Z),
+        Transform::from_xyz(4.0, 8.0, 4.0),
     ));
 }
 
@@ -71,12 +40,11 @@ fn spawn_cube(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // cube dynamic
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
         MeshMaterial3d(materials.add(Color::srgb_u8(0, 255, 0))),
-        Transform::from_xyz(2.5, 0.0, 0.25),
-        Collider::rectangle(0.5, 0.5),
+        Transform::from_xyz(2.5, 10., 0.0), // Y is now height
+        Collider::cuboid(0.5, 0.5, 0.5),
         RigidBody::Dynamic,
         TransformInterpolation,
         LinearDamping(0.9),
@@ -84,12 +52,12 @@ fn spawn_cube(
         Name::new("Dynamic Cube"),
     ));
 
-    // cube enemy
+    // Enemy cube
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
         MeshMaterial3d(materials.add(Color::srgb_u8(255, 0, 0))),
-        Transform::from_xyz(0.0, 2.5, 0.25),
-        Collider::rectangle(0.5, 0.5),
+        Transform::from_xyz(0.0, 0.25, 2.5), // Now at positive Z instead of Y
+        Collider::cuboid(0.5, 0.5, 0.5),
         RigidBody::Dynamic,
         TransformInterpolation,
         LinearDamping(0.9),
@@ -99,38 +67,38 @@ fn spawn_cube(
         Name::new("Enemy"),
     ));
 
-    // cube static
+    // Static cubes
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
         MeshMaterial3d(materials.add(Color::WHITE)),
-        Transform::from_xyz(-2.5, 0.0, 0.25),
-        Collider::rectangle(0.5, 0.5),
-        RigidBody::Static,
-    ));
-    // cube static
-    commands.spawn((
-        Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
-        MeshMaterial3d(materials.add(Color::WHITE)),
-        Transform::from_xyz(-3.0, 0.0, 0.25),
-        Collider::rectangle(0.5, 0.5),
-        RigidBody::Static,
-    ));
-    // cube static
-    commands.spawn((
-        Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
-        MeshMaterial3d(materials.add(Color::WHITE)),
-        Transform::from_xyz(-3.0, 0.5, 0.25),
-        Collider::rectangle(0.5, 0.5),
+        Transform::from_xyz(-2.5, 0.25, 0.0),
+        Collider::cuboid(0.5, 0.5, 0.5),
         RigidBody::Static,
     ));
 
-    // cube static
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
         MeshMaterial3d(materials.add(Color::WHITE)),
-        Transform::from_xyz(-3.0, 3.0, 0.25)
-            .with_rotation(Quat::from_rotation_z(45_f32.to_radians())),
-        Collider::rectangle(0.5, 0.5),
+        Transform::from_xyz(-3.0, 0.25, 0.0),
+        Collider::cuboid(0.5, 0.5, 0.5),
+        RigidBody::Static,
+    ));
+
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
+        MeshMaterial3d(materials.add(Color::WHITE)),
+        Transform::from_xyz(-3.0, 0.25, 0.5),
+        Collider::cuboid(0.5, 0.5, 0.5),
+        RigidBody::Static,
+    ));
+
+    // Rotated cube
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
+        MeshMaterial3d(materials.add(Color::WHITE)),
+        Transform::from_xyz(-3.0, 0.25, 3.0)
+            .with_rotation(Quat::from_rotation_y(45_f32.to_radians())), // Rotate around Y (vertical) axis
+        Collider::cuboid(0.5, 0.5, 0.5),
         RigidBody::Static,
     ));
 }

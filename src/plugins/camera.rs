@@ -19,13 +19,7 @@ fn spawn_camera(mut commands: Commands) {
             ..default()
         },
         Bloom::default(),
-        Transform {
-            translation: Vec3::new(0.0, -5.0, 10.0),
-            // Apply a -90° rotation around the Z-axis
-            rotation: Quat::from_rotation_z(-std::f32::consts::FRAC_PI_2),
-            ..Default::default()
-        }
-        .looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(0., 10., 10.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 }
 
@@ -34,8 +28,8 @@ fn focus_camera(
     subject_query: Query<&Transform, With<CameraFocus>>,
 ) {
     let mut camera_transform = camera_query.single_mut().unwrap();
-
     let mut focus_points = Vec::new();
+
     for transform in subject_query.iter() {
         focus_points.push(transform.translation);
     }
@@ -43,17 +37,23 @@ fn focus_camera(
     if !focus_points.is_empty() {
         let avg_position = focus_points.iter().sum::<Vec3>() / focus_points.len() as f32;
 
-        // adjust camera position smoothly
+        // Camera follows on X-Z plane, stays high on Y-axis
+        let target_camera_pos = Vec3::new(
+            avg_position.x,           // Follow X
+            10.0,                     // Stay high on Y (was Z)
+            avg_position.z + 10.0      // Follow Z with offset (was Y)
+        );
+
         camera_transform.translation = camera_transform
             .translation
-            .lerp(avg_position + Vec3::new(0.0, -5.0, 10.0), 0.1);
+            .lerp(target_camera_pos, 0.1);
 
-        // Optionally zoom out if there are many focus points (bullets, player, enemies)
+        // Zoom based on spread
         let max_distance = focus_points
             .iter()
             .map(|pos| pos.distance(avg_position))
             .fold(0.0, f32::max);
 
-        camera_transform.translation.z = 10.0 + max_distance; // Adjust zoom based on spread
+        camera_transform.translation.y = 10.0 + max_distance; // Adjust Y height for zoom
     }
 }

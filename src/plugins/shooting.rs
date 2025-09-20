@@ -2,7 +2,7 @@ use crate::components::enemy::Enemy;
 use crate::components::gamelayer::GameLayer;
 use crate::components::health::Health;
 use crate::components::player::Player;
-use avian2d::prelude::*;
+use avian3d::prelude::*;
 use bevy::prelude::*;
 
 pub struct ShootingPlugin;
@@ -38,7 +38,7 @@ impl Default for GunConfig {
 
 #[derive(Component)]
 struct Bullet {
-    direction: Dir2,
+    direction: Dir3,
     current_speed: f32,
 }
 
@@ -59,17 +59,16 @@ fn handle_shooting(
             if let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_pos) {
                 let player_transform = player_query.single().unwrap();
                 // Find intersection with plane at player's Z height
-                let t = (player_transform.translation.z - ray.origin.z) / ray.direction.z;
+                let player_height = player_transform.translation.y;
+                let t = (player_height - ray.origin.y) / ray.direction.y;
 
                 if t >= 0.0 {
                     let point = ray.get_point(t);
-                    // Get direction from player to mouse point
-                    let to_mouse = (Vec2::new(point.x, point.y)
-                        - Vec2::new(
-                            player_transform.translation.x,
-                            player_transform.translation.y,
-                        ))
-                    .normalize();
+                    let direction = Vec3::new(
+                        point.x - player_transform.translation.x,
+                        0.0,
+                        point.z - player_transform.translation.z,
+                    ).normalize();
 
                     // Spawn bullet with velocity in that direction
                     commands.spawn((
@@ -80,9 +79,9 @@ fn handle_shooting(
                             ..default()
                         })),
                         Transform::from_translation(player_transform.translation),
-                        Collider::circle(0.1),
+                        Collider::sphere(0.1),
                         Bullet {
-                            direction: Dir2::new_unchecked(to_mouse),
+                            direction: Dir3::new_unchecked(direction),
                             current_speed: gun_config.starting_speed,
                         },
                         CollisionLayers::new(GameLayer::PlayerBullet, GameLayer::Default),
@@ -101,29 +100,37 @@ fn move_bullets(
     for (mut transform, mut bullet) in &mut bullets {
         bullet.current_speed *= 1.0 + time.delta_secs() * gun_config.acceleration;
         let movement = bullet.direction * bullet.current_speed * time.delta_secs();
-        transform.translation += movement.extend(0.0);
+
+        transform.translation += movement;
     }
 }
 
 fn handle_bullet_collisions(
     mut commands: Commands,
-    mut bullets: Query<(Entity, &mut Transform, &mut Bullet, &Collider)>,
+    mut bullets: Query<(Entity, &mut Transform, &mut Bullet, &Collider), Without<Player>>,
     mut rigid_bodies: Query<(&RigidBody, &mut LinearVelocity)>,
     mut query_enemy: Query<&mut Health, With<Enemy>>,
     spatial_query: SpatialQuery,
-    player_query: Query<Entity, With<Player>>,
+    player_query: Query<(Entity, &Transform), With<Player>>,
     gun_config: Res<GunConfig>,
 ) {
-    let player_entity = player_query.single().unwrap();
+    let (player_entity, player_transform) = player_query.single().unwrap();
 
-    for (bullet_entity, transform, bullet, collider) in &mut bullets {
-        // Then check for collision at new position
+    for (bullet_entity, bullet_transform, bullet, bullet_collider) in &mut bullets {
+        {
+            let distance_from_player = bullet_transform.translation.distance(player_transform.translation);
+            if distance_from_player > 50.0 {
+                commands.entity(bullet_entity).despawn();
+                continue;
+            }
+        }
+
         if let Some(hit) = spatial_query.cast_shape(
-            collider,
-            Vec2::new(transform.translation.x, transform.translation.y),
-            0.0,
+            bullet_collider,
+            bullet_transform.translation,
+            bullet_transform.rotation,
             bullet.direction,
-            &ShapeCastConfig::from_max_distance(0.001), // Small distance check
+            &ShapeCastConfig::from_max_distance(0.01),
             &SpatialQueryFilter::from_mask(GameLayer::Default)
                 .with_excluded_entities([player_entity]),
         ) {

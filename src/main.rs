@@ -1,5 +1,6 @@
-use avian2d::prelude::*;
+use avian3d::prelude::*;
 use bevy::{prelude::*, window::WindowResolution};
+use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 mod components;
 mod plugins;
 
@@ -23,9 +24,9 @@ fn main() {
             WorldPlugin,
             ShootingPlugin,
             // Inspector
-            // EguiPlugin::default(),
-            // WorldInspectorPlugin::new(),
+            EguiPlugin::default(),
+            WorldInspectorPlugin::new(),
         ))
-        .insert_resource(Gravity(Vec2::ZERO))
+        // .insert_resource(Gravity(Vec3::ZERO))
         .run();
 }
