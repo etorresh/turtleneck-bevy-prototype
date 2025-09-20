@@ -68,7 +68,8 @@ fn handle_shooting(
                         point.x - player_transform.translation.x,
                         0.0,
                         point.z - player_transform.translation.z,
-                    ).normalize();
+                    )
+                    .normalize();
 
                     // Spawn bullet with velocity in that direction
                     commands.spawn((
@@ -118,7 +119,9 @@ fn handle_bullet_collisions(
 
     for (bullet_entity, bullet_transform, bullet, bullet_collider) in &mut bullets {
         {
-            let distance_from_player = bullet_transform.translation.distance(player_transform.translation);
+            let distance_from_player = bullet_transform
+                .translation
+                .distance(player_transform.translation);
             if distance_from_player > 50.0 {
                 commands.entity(bullet_entity).despawn();
                 continue;

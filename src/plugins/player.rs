@@ -66,7 +66,7 @@ fn move_player(
             let t = (player_height - ray.origin.y) / ray.direction.y;
 
             // If t is negative, the intersection is behind the camera
-            if t >= 0.0  {
+            if t >= 0.0 {
                 let point = ray.get_point(t);
                 let to_cursor = Vec2::new(point.x, point.z)
                     - Vec2::new(
@@ -76,15 +76,16 @@ fn move_player(
                 // Calculate angle in XY plane
                 let angle = to_cursor.y.atan2(to_cursor.x);
                 // Rotate only around Z axis
-                player_transform.rotation = Quat::from_rotation_y(-angle - std::f32::consts::FRAC_PI_2);
+                player_transform.rotation =
+                    Quat::from_rotation_y(-angle - std::f32::consts::FRAC_PI_2);
             }
         }
     }
 
     let direction = Vec3::new(
-(keys.pressed(KeyCode::KeyD) as i32 - keys.pressed(KeyCode::KeyA) as i32) as f32,
+        (keys.pressed(KeyCode::KeyD) as i32 - keys.pressed(KeyCode::KeyA) as i32) as f32,
         0.,
--((keys.pressed(KeyCode::KeyW) as i32 - keys.pressed(KeyCode::KeyS) as i32) as f32)
+        -((keys.pressed(KeyCode::KeyW) as i32 - keys.pressed(KeyCode::KeyS) as i32) as f32),
     );
 
     if direction.length_squared() > 0.0 {
@@ -120,12 +121,14 @@ fn move_player(
                         player_transform.translation.y = original_y;
                         remaining_distance -= safe_distance;
                     }
-                    let horizontal_normal = Vec3::new(hit.normal1.x, 0.0, hit.normal1.z).normalize();
-                    
-                    let slide_vector = raw_movement - horizontal_normal * raw_movement.dot(horizontal_normal);
-                    
+                    let horizontal_normal =
+                        Vec3::new(hit.normal1.x, 0.0, hit.normal1.z).normalize();
+
+                    let slide_vector =
+                        raw_movement - horizontal_normal * raw_movement.dot(horizontal_normal);
+
                     let horizontal_slide = Vec3::new(slide_vector.x, 0.0, slide_vector.z);
-                    
+
                     movement_direction = match horizontal_slide.try_normalize() {
                         Some(dir) => dir,
                         None => break,

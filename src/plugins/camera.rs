@@ -39,14 +39,12 @@ fn focus_camera(
 
         // Camera follows on X-Z plane, stays high on Y-axis
         let target_camera_pos = Vec3::new(
-            avg_position.x,           // Follow X
-            10.0,                     // Stay high on Y (was Z)
-            avg_position.z + 10.0      // Follow Z with offset (was Y)
+            avg_position.x,        // Follow X
+            10.0,                  // Stay high on Y (was Z)
+            avg_position.z + 10.0, // Follow Z with offset (was Y)
         );
 
-        camera_transform.translation = camera_transform
-            .translation
-            .lerp(target_camera_pos, 0.1);
+        camera_transform.translation = camera_transform.translation.lerp(target_camera_pos, 0.1);
 
         // Zoom based on spread
         let max_distance = focus_points
