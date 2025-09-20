@@ -32,8 +32,8 @@ impl Plugin for PlayerPlugin {
 
 fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
-        SceneRoot(asset_server.load("Player.gltf#Scene0")),
-        Transform::from_xyz(0.0, 0.50, 0.),
+        SceneRoot(asset_server.load("turtle/Turtle.gltf#Scene0")),
+        Transform::from_xyz(0.0, 0., 0.).with_scale(Vec3::splat(0.25)),
         Player,
         Collider::capsule(0.25, 1.),
         RigidBody::Kinematic,
