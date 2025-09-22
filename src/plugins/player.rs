@@ -35,7 +35,7 @@ fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
         SceneRoot(asset_server.load("turtle/Turtle.gltf#Scene0")),
         Transform::from_xyz(0.0, 0., 0.).with_scale(Vec3::splat(0.25)),
         Player,
-        Collider::capsule(0.25, 1.),
+        Collider::capsule(1., 10.),
         RigidBody::Kinematic,
         Speed(3.0),
         CameraFocus,

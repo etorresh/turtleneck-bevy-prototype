@@ -27,6 +27,5 @@ fn main() {
             EguiPlugin::default(),
             WorldInspectorPlugin::new(),
         ))
-        // .insert_resource(Gravity(Vec3::ZERO))
         .run();
 }
