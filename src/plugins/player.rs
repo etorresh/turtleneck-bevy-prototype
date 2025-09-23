@@ -23,6 +23,19 @@ const MAX_MOVEMENTS: u8 = 2;
 #[derive(Component)]
 struct Speed(f32);
 
+#[derive(Component)]
+pub struct PlayerAnimations {
+    pub idle: Handle<AnimationClip>,
+    pub walking: Handle<AnimationClip>,
+    pub current_state: AnimationState,
+}
+
+#[derive(PartialEq, Clone)]
+pub enum AnimationState {
+    Idle,
+    Walking,
+}
+
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_player)
@@ -31,6 +44,7 @@ impl Plugin for PlayerPlugin {
 }
 
 fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let graph = AnimationGraph::new();
     commands.spawn((
         SceneRoot(asset_server.load("turtle/Turtle.gltf#Scene0")),
         Transform::from_xyz(0.0, 0., 0.).with_scale(Vec3::splat(0.25)),
@@ -40,6 +54,11 @@ fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
         Speed(3.0),
         CameraFocus,
         Name::new("Player"),
+        PlayerAnimations {
+            idle: asset_server.load("turtle/Turtle.gltf#Animation0"),
+            walking: asset_server.load("turtle/Turtle.gltf#Animation1"),
+            current_state: AnimationState::Idle,
+        },
     ));
 }
 
