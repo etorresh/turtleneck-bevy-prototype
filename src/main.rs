@@ -9,15 +9,17 @@ use plugins::{
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    resolution: WindowResolution::new(1920, 1080).with_scale_factor_override(1.0),
-                    position: WindowPosition::Centered(MonitorSelection::Index(1)),
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        resolution: WindowResolution::new(1920, 1080)
+                            .with_scale_factor_override(1.0),
+                        position: WindowPosition::Centered(MonitorSelection::Index(1)),
+                        ..default()
+                    }),
                     ..default()
-                }),
-                ..default()
-            })
-            .disable::<AudioPlugin>(),
+                })
+                .disable::<AudioPlugin>(),
             PhysicsPlugins::default(),
             PhysicsDebugPlugin::default(),
             PlayerPlugin,

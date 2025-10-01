@@ -1,5 +1,5 @@
 use crate::components::camera::CameraFocus;
-use bevy::{ post_process::bloom::Bloom, prelude::*, render::view::Hdr};
+use bevy::{post_process::bloom::Bloom, prelude::*, render::view::Hdr};
 
 pub struct CameraPlugin;
 
