@@ -65,20 +65,20 @@ fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
 fn move_player(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
-    mut player_query: Query<(&mut Transform, &Speed, &Collider, Entity), With<Player>>,
+    player_query: Single<(&mut Transform, &Speed, &Collider, Entity), With<Player>>,
     spatial_query: SpatialQuery,
     mut physics_time: ResMut<Time<Physics>>,
-    windows: Query<&Window>,
-    camera: Query<(&Camera, &GlobalTransform)>,
+    windows: Single<&Window>,
+    camera: Single<(&Camera, &GlobalTransform)>,
 ) {
     let (mut player_transform, player_speed, player_collider, player_entity) =
-        player_query.single_mut().unwrap();
+        player_query.into_inner();
 
     let original_y = player_transform.translation.y;
 
     // rotate to face mouse
-    if let Some(cursor_pos) = windows.single().unwrap().cursor_position() {
-        let (camera, camera_transform) = camera.single().unwrap();
+    if let Some(cursor_pos) = windows.cursor_position() {
+        let (camera, camera_transform) = camera.into_inner();
 
         if let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_pos) {
             let player_height = player_transform.translation.y;

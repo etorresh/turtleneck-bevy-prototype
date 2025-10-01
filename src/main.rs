@@ -1,6 +1,5 @@
 use avian3d::prelude::*;
-use bevy::{prelude::*, window::WindowResolution};
-use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
+use bevy::{audio::AudioPlugin, prelude::*, window::WindowResolution};
 mod components;
 mod plugins;
 
@@ -12,20 +11,21 @@ fn main() {
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
-                    resolution: WindowResolution::new(1600., 900.).with_scale_factor_override(1.0),
+                    resolution: WindowResolution::new(1920, 1080).with_scale_factor_override(1.0),
                     position: WindowPosition::Centered(MonitorSelection::Index(1)),
                     ..default()
                 }),
                 ..default()
-            }),
+            })
+            .disable::<AudioPlugin>(),
             PhysicsPlugins::default(),
             PlayerPlugin,
             CameraPlugin,
             WorldPlugin,
             ShootingPlugin,
             // Inspector
-            EguiPlugin::default(),
-            WorldInspectorPlugin::new(),
+            // EguiPlugin::default(),
+            // WorldInspectorPlugin::new(),
         ))
         .run();
 }

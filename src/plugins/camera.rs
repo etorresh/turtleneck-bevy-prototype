@@ -1,5 +1,5 @@
 use crate::components::camera::CameraFocus;
-use bevy::{core_pipeline::bloom::Bloom, prelude::*};
+use bevy::{ post_process::bloom::Bloom, prelude::*, render::view::Hdr};
 
 pub struct CameraPlugin;
 
@@ -14,10 +14,7 @@ fn spawn_camera(mut commands: Commands) {
     // camera
     commands.spawn((
         Camera3d::default(),
-        Camera {
-            hdr: true,
-            ..default()
-        },
+        Hdr,
         Bloom::default(),
         Transform::from_xyz(0., 10., 10.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
