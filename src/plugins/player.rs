@@ -43,35 +43,42 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let graph = AnimationGraph::new();
-    commands.spawn((
-        SceneRoot(asset_server.load("turtle/Turtle.gltf#Scene0")),
-        Transform::from_xyz(0.0, 0., 0.).with_scale(Vec3::splat(0.25)),
-        Player,
-        Collider::capsule(1., 10.),
-        RigidBody::Kinematic,
-        Speed(3.0),
-        CameraFocus,
-        Name::new("Player"),
-        PlayerAnimations {
-            idle: asset_server.load("turtle/Turtle.gltf#Animation0"),
-            walking: asset_server.load("turtle/Turtle.gltf#Animation1"),
-            current_state: AnimationState::Idle,
-        },
-    ));
+fn spawn_player(
+    mut commands: Commands, 
+    asset_server: Res<AssetServer>) {
+        commands.spawn((
+            SceneRoot(asset_server.load("turtle/Turtle.gltf#Scene0")),
+            Transform::from_xyz(0.0, 0., 0.).with_scale(Vec3::splat(0.25)),
+            Player,
+            RigidBody::Kinematic,
+            Collider::compound(vec![
+                (
+                    Vec3::new(0., 2.5, 0.),
+                    Quat::IDENTITY,
+                    Collider::capsule(1., 3.)
+                )
+            ]),
+            Speed(3.0),
+            CameraFocus,
+            Name::new("Player"),
+            PlayerAnimations {
+                idle: asset_server.load("turtle/Turtle.gltf#Animation0"),
+                walking: asset_server.load("turtle/Turtle.gltf#Animation1"),
+                current_state: AnimationState::Idle,
+            },
+        ));
 }
 
 fn move_player(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
-    player_query: Single<(&mut Transform, &Speed, &Collider, Entity), With<Player>>,
+    player_query: Single<(&mut Transform, &Speed, Entity, &Collider), With<Player>>,
     spatial_query: SpatialQuery,
     mut physics_time: ResMut<Time<Physics>>,
     windows: Single<&Window>,
     camera: Single<(&Camera, &GlobalTransform)>,
 ) {
-    let (mut player_transform, player_speed, player_collider, player_entity) =
+    let (mut player_transform, player_speed, player_entity, player_collider) =
         player_query.into_inner();
 
     let original_y = player_transform.translation.y;
