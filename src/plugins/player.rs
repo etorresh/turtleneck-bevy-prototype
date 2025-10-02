@@ -146,12 +146,15 @@ fn move_player(
                     let horizontal_normal = horizontal.normalize();
 
                     // check if we're moving almost directly into the wall (opposite to normal)
-                    if (horizontal_normal + move_dir).length_squared() < COLLISION_EPSILON * COLLISION_EPSILON {
+                    if (horizontal_normal + move_dir).length_squared()
+                        < COLLISION_EPSILON * COLLISION_EPSILON
+                    {
                         break;
                     }
 
                     // this removes the component of movement that goes into the wall
-                    let slide_vector = desired_movement - horizontal_normal * desired_movement.dot(horizontal_normal);
+                    let slide_vector = desired_movement
+                        - horizontal_normal * desired_movement.dot(horizontal_normal);
 
                     move_dir = slide_vector.normalize_or_zero();
                     if move_dir.length_squared() < COLLISION_EPSILON * COLLISION_EPSILON {
