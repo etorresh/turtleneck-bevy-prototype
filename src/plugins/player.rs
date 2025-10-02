@@ -18,7 +18,7 @@ const COLLISION_EPSILON: f32 = f32::EPSILON * 80_000.0;
 // 1st handles the first wall, 2nd resolves the second wall (if in a corner)
 // A 3rd iteration isn't needed, as movement becomes negligible (this might change if the player speed changes)
 // I lean towards keeping it at 2 because values greater than 2 jitter when colliding with sharp colliders
-const MAX_MOVEMENTS: u8 = 2;
+const MAX_MOVEMENT_ITERATIONS: u8 = 2;
 
 #[derive(Component)]
 struct Speed(f32);
@@ -77,8 +77,6 @@ fn move_player(
     let (mut player_transform, player_speed, player_entity, player_collider) =
         player_query.into_inner();
 
-    let original_y = player_transform.translation.y;
-
     // rotate to face mouse
     if let Some(cursor_pos) = windows.cursor_position() {
         let (camera, camera_transform) = camera.into_inner();
@@ -104,31 +102,26 @@ fn move_player(
         }
     }
 
-    let direction = Vec3::new(
+    let move_input = Vec3::new(
         (keys.pressed(KeyCode::KeyD) as i32 - keys.pressed(KeyCode::KeyA) as i32) as f32,
         0.,
         -((keys.pressed(KeyCode::KeyW) as i32 - keys.pressed(KeyCode::KeyS) as i32) as f32),
     );
 
-    if direction.length_squared() > 0.0 {
+    if move_input.length_squared() > 0.0 {
         let mut remaining_distance = player_speed.0 * time.delta_secs();
-        let mut movement_direction = direction.normalize();
-        for _ in 0..MAX_MOVEMENTS {
-            // 0.0 instead of COLLISION_EPSILON to allow movement towards dynamic rigidbodies
-            if remaining_distance <= 0.0 {
+        let mut move_dir = move_input.normalize();
+        for _ in 0..MAX_MOVEMENT_ITERATIONS {
+            if remaining_distance <= COLLISION_EPSILON {
                 break;
             }
-            let raw_movement = movement_direction * remaining_distance;
+            let desired_movement = move_dir * remaining_distance;
 
             let shape_hit = spatial_query.cast_shape(
                 player_collider,
-                Vector::new(
-                    player_transform.translation.x,
-                    player_transform.translation.y,
-                    player_transform.translation.z,
-                ),
+                player_transform.translation,
                 player_transform.rotation,
-                Dir3::new_unchecked(movement_direction),
+                Dir3::new_unchecked(move_dir),
                 &ShapeCastConfig::from_max_distance(remaining_distance),
                 &SpatialQueryFilter::from_mask(GameLayer::Default)
                     .with_excluded_entities([player_entity]),
@@ -137,27 +130,37 @@ fn move_player(
             match shape_hit {
                 Some(hit) => {
                     let safe_distance = (hit.distance - COLLISION_EPSILON).max(0.0);
-                    let safe_movement = movement_direction * safe_distance;
+                    let safe_movement = move_dir * safe_distance;
                     if safe_distance > COLLISION_EPSILON {
                         player_transform.translation += safe_movement;
-                        player_transform.translation.y = original_y;
                         remaining_distance -= safe_distance;
                     }
-                    let horizontal_normal =
-                        Vec3::new(hit.normal1.x, 0.0, hit.normal1.z).normalize();
+                    let mut horizontal = Vec3::new(hit.normal1.x, 0.0, hit.normal1.z);
+                    // clamp as circular colliders can produce tiny normals even on perfectly aligned surfaces
+                    if horizontal.x.abs() < COLLISION_EPSILON {
+                        horizontal.x = 0.0;
+                    }
+                    if horizontal.z.abs() < COLLISION_EPSILON {
+                        horizontal.z = 0.0;
+                    }
+                    let horizontal_normal = horizontal.normalize();
 
-                    let slide_vector =
-                        raw_movement - horizontal_normal * raw_movement.dot(horizontal_normal);
+                    // check if we're moving almost directly into the wall (opposite to normal)
+                    if (horizontal_normal + move_dir).length_squared() < COLLISION_EPSILON * COLLISION_EPSILON {
+                        break;
+                    }
 
-                    let horizontal_slide = Vec3::new(slide_vector.x, 0.0, slide_vector.z);
+                    // this removes the component of movement that goes into the wall
+                    let slide_vector = desired_movement - horizontal_normal * desired_movement.dot(horizontal_normal);
 
-                    movement_direction = match horizontal_slide.try_normalize() {
-                        Some(dir) => dir,
-                        None => break,
-                    };
+                    move_dir = slide_vector.normalize_or_zero();
+                    if move_dir.length_squared() < COLLISION_EPSILON * COLLISION_EPSILON {
+                        break;
+                    }
                 }
                 None => {
-                    player_transform.translation += raw_movement;
+                    // no collision detected, apply the full movement
+                    player_transform.translation += desired_movement;
                     break;
                 }
             }

@@ -21,7 +21,7 @@ fn main() {
                 })
                 .disable::<AudioPlugin>(),
             PhysicsPlugins::default(),
-            PhysicsDebugPlugin::default(),
+            //PhysicsDebugPlugin::default(),
             PlayerPlugin,
             CameraPlugin,
             WorldPlugin,
