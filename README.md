@@ -10,3 +10,6 @@ Prototype game built with Bevy + Avian Physics. Custom player controller, time-s
 Animation
     - What are the different methods? I was worried there would be 10 competing ways to animate a 3D model but it seems the standard is "Hierarchical Finite State Machine with Weighted Blending" and Bevy uses nodes to implement it.
     - Progress: Sprites -> Hard-cut state machines -> Linear crossfading -> hierarchical state machines with weighted blending -> Node-based/compositional systems
+
+# Keys
+- H to stop time

@@ -4,7 +4,7 @@ mod components;
 mod plugins;
 
 use plugins::{
-    camera::CameraPlugin, player::PlayerPlugin, shooting::ShootingPlugin, world::WorldPlugin,
+    camera::CameraPlugin, player::PlayerPlugin, shooting::ShootingPlugin, level::WorldPlugin, world_switching::WorldSwitchingPlugin, input::InputPlugin
 };
 fn main() {
     App::new()
@@ -22,13 +22,16 @@ fn main() {
                 .disable::<AudioPlugin>(),
             PhysicsPlugins::default(),
             //PhysicsDebugPlugin::default(),
+            InputPlugin,
             PlayerPlugin,
             CameraPlugin,
             WorldPlugin,
             ShootingPlugin,
+            WorldSwitchingPlugin,
             // Inspector
             // EguiPlugin::default(),
             // WorldInspectorPlugin::new(),
+            
         ))
         .run();
 }

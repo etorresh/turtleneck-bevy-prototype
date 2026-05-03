@@ -6,4 +6,5 @@ pub enum GameLayer {
     Default,
     PlayerBullet,
     Floor,
+    Sensor,
 }
