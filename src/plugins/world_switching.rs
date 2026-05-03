@@ -1,3 +1,4 @@
+use avian3d::prelude::Position;
 use bevy::prelude::*;
 
 use crate::{components::player::Player, plugins::{input::KeyBindings, level::{InsideWorld, OutsideWorld}}};
@@ -36,12 +37,12 @@ fn check_key_and_go_inside(
     if keys.just_released((*keybinds).retract_to_shell) {
         if let ActiveWorld::Outside = *active_world {
             println!("we're inside now");
-            // first dereference through Single, second deref to get Transform from &Transform
-            outside_checkpoint.transform = Some(**player_transform);
 
             **outside_world_visiblity = Visibility::Hidden;
-
             **inside_world_visiblity = Visibility::Visible;
+
+            // first dereference through Single, second deref to get Transform from &Transform
+            outside_checkpoint.transform = Some(**player_transform);
 
             *active_world = ActiveWorld::Inside;
         }
@@ -54,6 +55,7 @@ pub struct MovedOutside;
 fn on_moved_outside(
     _event: On<MovedOutside>,
     mut active_world: ResMut<ActiveWorld>,
+    mut player: Single<(&mut Transform, &mut Position), With<Player>>,
     mut outside_checkpoint: ResMut<OutsideCheckpoint>,
     mut outside_world_visibility: Single<&mut Visibility, (With<OutsideWorld>, Without<InsideWorld>)>,
     mut inside_world_visibility: Single<&mut Visibility, (With<InsideWorld>, Without<OutsideWorld>)>,
@@ -63,6 +65,10 @@ fn on_moved_outside(
 
         **outside_world_visibility = Visibility::Visible;
         **inside_world_visibility =  Visibility::Hidden;
+
+        let target = outside_checkpoint.transform.take().unwrap().translation;
+        player.0.translation = target;
+        *player.1 = Position(target);
 
         *active_world = ActiveWorld::Outside;
     }
