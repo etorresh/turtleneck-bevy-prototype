@@ -7,10 +7,11 @@ pub struct WorldSwitchingPlugin;
 
 impl Plugin for WorldSwitchingPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, check_key_and_go_inside);
+        app.add_systems(Update,check_for_retract);
         app.insert_resource(ActiveWorld::Outside);
         app.init_resource::<OutsideCheckpoint>();
         app.add_observer(on_moved_outside);
+        app.add_observer(on_moved_inside);
     }
 }
 
@@ -25,27 +26,37 @@ enum ActiveWorld {
     Inside,
 }
 
-fn check_key_and_go_inside(
+fn check_for_retract(
+    mut commands: Commands,
     keys: Res<ButtonInput<KeyCode>>,
     keybinds: Res<KeyBindings>,
+) {
+    if keys.just_released((*keybinds).retract_to_shell) {
+        commands.trigger(MovedInside);
+    }
+}
+
+#[derive(Event)]
+struct MovedInside;
+
+fn on_moved_inside(
+    _event: On<MovedInside>,
     mut active_world: ResMut<ActiveWorld>,
     player_transform: Single<&Transform, With<Player>>,
     mut outside_checkpoint: ResMut<OutsideCheckpoint>,
     mut outside_world_visiblity: Single<&mut Visibility, (With<OutsideWorld>, Without<InsideWorld>)>,
     mut inside_world_visiblity: Single<&mut Visibility, (With<InsideWorld>, Without<OutsideWorld>)>,
 ) {
-    if keys.just_released((*keybinds).retract_to_shell) {
-        if let ActiveWorld::Outside = *active_world {
-            println!("we're inside now");
+    if let ActiveWorld::Outside = *active_world {
+        println!("we're inside now");
 
-            **outside_world_visiblity = Visibility::Hidden;
-            **inside_world_visiblity = Visibility::Visible;
+        **outside_world_visiblity = Visibility::Hidden;
+        **inside_world_visiblity = Visibility::Visible;
 
-            // first dereference through Single, second deref to get Transform from &Transform
-            outside_checkpoint.transform = Some(**player_transform);
+        // first dereference through Single, second deref to get Transform from &Transform
+        outside_checkpoint.transform = Some(**player_transform);
 
-            *active_world = ActiveWorld::Inside;
-        }
+        *active_world = ActiveWorld::Inside;
     }
 }
 
