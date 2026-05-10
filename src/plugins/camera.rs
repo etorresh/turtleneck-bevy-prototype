@@ -1,12 +1,13 @@
-use crate::components::camera::CameraFocus;
+use crate::components::{camera::CameraFocus};
 use bevy::{post_process::bloom::Bloom, prelude::*, render::view::Hdr};
+use crate::components::gamestate::{ActivityState};
 
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_camera)
-            .add_systems(Update, focus_camera);
+            .add_systems(Update, focus_camera.run_if(in_state(ActivityState::Playing)));
     }
 }
 
@@ -21,10 +22,9 @@ fn spawn_camera(mut commands: Commands) {
 }
 
 fn focus_camera(
-    mut camera_query: Query<&mut Transform, (With<Camera>, Without<CameraFocus>)>,
+    mut camera_transform: Single<(&mut Transform), (With<Camera>, Without<CameraFocus>)>,
     subject_query: Query<&Transform, With<CameraFocus>>,
 ) {
-    let mut camera_transform = camera_query.single_mut().unwrap();
     let mut focus_points = Vec::new();
 
     for transform in subject_query.iter() {

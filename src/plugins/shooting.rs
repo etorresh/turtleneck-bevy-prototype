@@ -1,9 +1,10 @@
-use crate::components::enemy::Enemy;
+use crate::{components::enemy::Enemy, plugins::level::OutsideWorld};
 use crate::components::gamelayer::GameLayer;
 use crate::components::health::Health;
 use crate::components::player::Player;
 use avian3d::prelude::*;
 use bevy::prelude::*;
+use crate::components::gamestate::{ActivityState, LocationState};
 
 pub struct ShootingPlugin;
 
@@ -12,7 +13,7 @@ impl Plugin for ShootingPlugin {
         app.init_resource::<GunConfig>()
             .add_systems(
                 Update,
-                (handle_shooting, move_bullets, handle_bullet_collisions).chain(),
+                (handle_shooting, move_bullets, handle_bullet_collisions).chain().run_if(in_state(LocationState::Outside)).run_if(in_state(ActivityState::Playing))
             )
             .register_type::<GunConfig>();
     }
@@ -86,6 +87,7 @@ fn handle_shooting(
                             current_speed: gun_config.starting_speed,
                         },
                         CollisionLayers::new(GameLayer::PlayerBullet, GameLayer::Default),
+                        OutsideWorld,
                     ));
                 }
             }

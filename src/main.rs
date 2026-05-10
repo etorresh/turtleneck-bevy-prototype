@@ -6,6 +6,8 @@ mod plugins;
 use plugins::{
     camera::CameraPlugin, player::PlayerPlugin, shooting::ShootingPlugin, level::WorldPlugin, world_switching::WorldSwitchingPlugin, input::InputPlugin
 };
+
+use crate::components::gamestate::{ActivityState, LocationState};
 fn main() {
     App::new()
         .add_plugins((
@@ -20,6 +22,10 @@ fn main() {
                     ..default()
                 })
                 .disable::<AudioPlugin>(),
+            ))
+        .init_state::<ActivityState>()
+        .init_state::<LocationState>()
+        .add_plugins((
             PhysicsPlugins::default(),
             //PhysicsDebugPlugin::default(),
             InputPlugin,
@@ -31,7 +37,6 @@ fn main() {
             // Inspector
             // EguiPlugin::default(),
             // WorldInspectorPlugin::new(),
-            
-        ))
+            ))
         .run();
 }
