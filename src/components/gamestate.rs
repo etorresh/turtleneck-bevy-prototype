@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-#[derive(States, Debug, Hash, Eq, PartialEq, Clone, Default)]
+#[derive(States, Debug, Hash, Eq, PartialEq, Clone, Default, )]
 pub enum ActivityState{
     #[default]
     Playing,
@@ -7,7 +7,7 @@ pub enum ActivityState{
     Pause,
 }
 
-#[derive(States, Debug, Hash, Eq, PartialEq, Clone, Default)]
+#[derive(States, Debug, Hash, Eq, PartialEq, Clone, Default, )]
 pub enum LocationState{
     #[default]
     Outside,

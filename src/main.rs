@@ -7,7 +7,7 @@ use plugins::{
     camera::CameraPlugin, player::PlayerPlugin, shooting::ShootingPlugin, level::WorldPlugin, world_switching::WorldSwitchingPlugin, input::InputPlugin
 };
 
-use crate::components::gamestate::{ActivityState, LocationState};
+use crate::{components::gamestate::{ActivityState, LocationState}, plugins::cutscene::CutscenePlugin};
 fn main() {
     App::new()
         .add_plugins((
@@ -28,6 +28,7 @@ fn main() {
         .add_plugins((
             PhysicsPlugins::default(),
             //PhysicsDebugPlugin::default(),
+            CutscenePlugin,
             InputPlugin,
             PlayerPlugin,
             CameraPlugin,

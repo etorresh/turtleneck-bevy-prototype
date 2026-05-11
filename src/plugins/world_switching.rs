@@ -1,7 +1,7 @@
 use avian3d::prelude::Position;
 use bevy::prelude::*;
 
-use crate::{components::{gamestate::LocationState, player::Player}, plugins::{input::KeyBindings, level::{InsideWorld, OutsideWorld}}};
+use crate::{components::{gamestate::{ActivityState, LocationState}, player::Player}, plugins::{cutscene::CutsceneSequence, cutscene::CutsceneAction, input::KeyBindings, level::{InsideWorld, OutsideWorld}}};
 
 pub struct WorldSwitchingPlugin;
 
@@ -38,19 +38,20 @@ struct MovedInside;
 fn on_moved_inside(
     _event: On<MovedInside>,
     current_location: Res<State<LocationState>>,
-    mut next_location: ResMut<NextState<LocationState>>,
-    mut player: Single<(&mut Transform, &mut Position), With<Player>>,
+    current_activity: Res<State<ActivityState>>,
+    mut next_activity: ResMut<NextState<ActivityState>>,
     mut outside_checkpoint: ResMut<OutsideCheckpoint>,
+    mut cutscene: ResMut<CutsceneSequence>,
+    player: Single<&mut Transform, With<Player>>,
 ) {
-    if *current_location == LocationState::Outside {
-        println!("we're inside now");
-        // first dereference through Single, second deref to get Transform from &Transform
-        outside_checkpoint.transform = Some(*(player.0));
-        let target = Vec3::from([0.0, 0.0, 5.0]);
-        player.0.translation = target;
-        *player.1 = Position(target);
-
-        next_location.set(LocationState::Inside);
+    if *current_location == LocationState::Outside && *current_activity == ActivityState::Playing {
+        outside_checkpoint.transform = Some(**player);
+        next_activity.set(ActivityState::Cutscene);
+        cutscene.actions.push_back(CutsceneAction::Wait(1.0));
+        cutscene.actions.push_back(CutsceneAction::MovePlayer(Vec3::from([0.0, 0.0, 5.0])));
+        cutscene.actions.push_back(CutsceneAction::NextLevel(LocationState::Inside));
+        cutscene.actions.push_back(CutsceneAction::MoveCameraToPlayer);
+        cutscene.actions.push_back(CutsceneAction::Wait(0.2));
     }
 }
 
@@ -60,22 +61,22 @@ pub struct MovedOutside;
 fn on_moved_outside(
     _event: On<MovedOutside>,
     current_location: Res<State<LocationState>>,
-    mut next_location: ResMut<NextState<LocationState>>,
-    mut player: Single<(&mut Transform, &mut Position), With<Player>>,
     mut outside_checkpoint: ResMut<OutsideCheckpoint>,
+    current_activity: Res<State<ActivityState>>,
+    mut next_activity: ResMut<NextState<ActivityState>>,
+    mut cutscene: ResMut<CutsceneSequence>,
 ) {
-    if *current_location == LocationState::Inside {
-        println!("we're outside now");
+    if *current_location == LocationState::Inside && *current_activity == ActivityState::Playing {
         let target = outside_checkpoint.transform.take().unwrap().translation;
-        player.0.translation = target;
-        *player.1 = Position(target);
-
-        next_location.set(LocationState::Outside);
+        next_activity.set(ActivityState::Cutscene);
+        cutscene.actions.push_back(CutsceneAction::MovePlayer(target));
+        cutscene.actions.push_back(CutsceneAction::MoveCameraToPlayer);
+        cutscene.actions.push_back(CutsceneAction::NextLevel(LocationState::Outside));
+        cutscene.actions.push_back(CutsceneAction::Wait(0.75));
     }
 }
 
 fn show_outside(mut commands: Commands, query: Query<Entity, With<OutsideWorld>>) {
-    println!("hello");
     for entity in query {
         commands.entity(entity).insert(Visibility::Visible);
     }
@@ -91,7 +92,6 @@ fn show_inside(mut commands: Commands, query: Query<Entity, With<InsideWorld>>) 
     }
 }
 fn hide_inside(mut commands: Commands, query: Query<Entity, With<InsideWorld>>) {
-    println!("bye");
     for entity in query {
         commands.entity(entity).insert(Visibility::Hidden);
     }

@@ -1,5 +1,6 @@
 use crate::components::camera::CameraFocus;
 use crate::components::gamelayer::GameLayer;
+use crate::components::gamestate::ActivityState;
 use crate::components::player::{Player, PlayerSet};
 use avian3d::{math::Vector, prelude::*};
 use bevy::prelude::*;
@@ -39,7 +40,7 @@ pub enum AnimationState {
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_player)
-            .add_systems(Update, move_player.in_set(PlayerSet::Movement));
+            .add_systems(Update, move_player.in_set(PlayerSet::Movement).run_if(in_state(ActivityState::Playing)));
     }
 }
 
