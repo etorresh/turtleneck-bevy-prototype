@@ -39,43 +39,43 @@ fn process_cutscene(
     mut player: Single<(&mut Transform, &mut Position), With<Player>>,
     mut camera_transform: Single<&mut Transform, (With<Camera3d>, Without<Player>)>,
 ) {
-    let action = match cutscene_sequence.actions.front() {
-        Some(a) => a.clone(),
-        None => {
-            next_activity.set(ActivityState::Playing);
+    loop {
+        let action = match cutscene_sequence.actions.front() {
+            Some(a) => a.clone(),
+            None => {
+                next_activity.set(ActivityState::Playing);
+                return;
+            }
+        };
+        
+        let mut is_finished = true;
+        match action {
+            CutsceneAction::Wait(duration) => {
+                let timer = cutscene_sequence.timer.get_or_insert(Timer::from_seconds(duration, TimerMode::Once));
+                timer.tick(time.delta());
+                is_finished = timer.is_finished();
+            },
+            CutsceneAction::MovePlayer(target) => {
+                player.0.translation = target;
+                *player.1 = Position(target);
+            },
+            CutsceneAction::NextLevel(next_level) => {
+                next_location.set(next_level);
+            },
+            CutsceneAction::MoveCameraToPlayer => {
+                // Todo: move camera magic numbers scattered across systems to a single CameraSettings resource (height, lerp_speed, zoom, etc)
+                camera_transform.translation = Vec3::new(player.0.translation.x, 10.0, player.0.translation.z + 10.0);
+            }
+            _ => {
+                println!("action not implemented yet");
+
+            }
+        }
+        if is_finished {
+            cutscene_sequence.actions.pop_front();
+            cutscene_sequence.timer = None;
+        } else {
             return;
         }
-    };
-    
-    let mut is_finished = false;
-    match action {
-        CutsceneAction::Wait(duration) => {
-            let timer = cutscene_sequence.timer.get_or_insert(Timer::from_seconds(duration, TimerMode::Once));
-            timer.tick(time.delta());
-            if timer.is_finished() {
-                is_finished = true;
-            }
-        },
-        CutsceneAction::MovePlayer(target) => {
-            player.0.translation = target;
-            *player.1 = Position(target);
-            is_finished = true;
-        },
-        CutsceneAction::NextLevel(next_level) => {
-            next_location.set(next_level);
-            is_finished = true;
-        },
-        CutsceneAction::MoveCameraToPlayer => {
-            // Todo: move camera magic numbers scattered across systems to a single CameraSettings resource (height, lerp_speed, zoom, etc)
-            camera_transform.translation = Vec3::new(player.0.translation.x, 10.0, player.0.translation.z + 10.0);
-            is_finished = true;
-        }
-        _ => {
-
-        }
-    }
-    if is_finished {
-        cutscene_sequence.actions.pop_front();
-        cutscene_sequence.timer = None;
     }
 }
