@@ -1,4 +1,4 @@
-use avian3d::prelude::Position;
+use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
@@ -22,9 +22,33 @@ impl Plugin for WorldSwitchingPlugin {
         app.init_resource::<OutsideCheckpoint>();
         app.add_observer(on_moved_outside);
         app.add_observer(on_moved_inside);
-        app.add_systems(OnEnter(LocationState::Outside), (show_outside, hide_inside));
-        app.add_systems(OnEnter(LocationState::Inside), (show_inside, hide_outside));
-        app.add_systems(PostStartup, (show_outside, hide_inside));
+        app.add_systems(
+            OnEnter(LocationState::Inside),
+            (
+                show_inside,
+                hide_outside,
+                enable_physics_inside,
+                disable_physics_outside,
+            ),
+        );
+        app.add_systems(
+            OnEnter(LocationState::Outside),
+            (
+                show_outside,
+                hide_inside,
+                enable_physics_outside,
+                disable_physics_inside,
+            ),
+        );
+        app.add_systems(
+            PostStartup,
+            (
+                show_outside,
+                hide_inside,
+                enable_physics_outside,
+                disable_physics_inside,
+            ),
+        );
     }
 }
 
@@ -118,28 +142,94 @@ fn on_moved_outside(
             start: None,
             reversed: true,
         });
-        cutscene.actions.push_back(CutsceneAction::Wait(0.75));
+        cutscene.actions.push_back(CutsceneAction::Wait(0.2));
     }
 }
 
-// Todo: this should also handle deactivating physics
-fn show_outside(mut commands: Commands, query: Query<Entity, With<OutsideWorld>>) {
+fn show_outside(
+    mut commands: Commands,
+    query: Query<Entity, (With<OutsideWorld>, With<Visibility>)>,
+) {
     for entity in query {
         commands.entity(entity).insert(Visibility::Visible);
     }
 }
-fn hide_outside(mut commands: Commands, query: Query<Entity, With<OutsideWorld>>) {
+fn hide_outside(
+    mut commands: Commands,
+    query: Query<Entity, (With<OutsideWorld>, With<Visibility>)>,
+) {
     for entity in query {
         commands.entity(entity).insert(Visibility::Hidden);
     }
 }
-fn show_inside(mut commands: Commands, query: Query<Entity, With<InsideWorld>>) {
+fn show_inside(
+    mut commands: Commands,
+    query: Query<Entity, (With<InsideWorld>, With<Visibility>)>,
+) {
     for entity in query {
         commands.entity(entity).insert(Visibility::Visible);
     }
 }
-fn hide_inside(mut commands: Commands, query: Query<Entity, With<InsideWorld>>) {
+fn hide_inside(
+    mut commands: Commands,
+    query: Query<Entity, (With<InsideWorld>, With<Visibility>)>,
+) {
     for entity in query {
         commands.entity(entity).insert(Visibility::Hidden);
+    }
+}
+
+fn enable_physics_outside(
+    mut commands: Commands,
+    query: Query<
+        Entity,
+        (
+            With<OutsideWorld>,
+            With<RigidBodyDisabled>,
+            With<ColliderDisabled>,
+        ),
+    >,
+) {
+    for entity in query {
+        commands
+            .entity(entity)
+            .remove::<(RigidBodyDisabled, ColliderDisabled)>();
+    }
+}
+fn disable_physics_outside(
+    mut commands: Commands,
+    query: Query<Entity, (With<OutsideWorld>, With<RigidBody>, With<Collider>)>,
+) {
+    for entity in query {
+        commands
+            .entity(entity)
+            .insert((RigidBodyDisabled, ColliderDisabled));
+    }
+}
+fn enable_physics_inside(
+    mut commands: Commands,
+    query: Query<
+        Entity,
+        (
+            With<InsideWorld>,
+            With<RigidBodyDisabled>,
+            With<ColliderDisabled>,
+        ),
+    >,
+) {
+    for entity in query {
+        commands
+            .entity(entity)
+            .remove::<(RigidBodyDisabled, ColliderDisabled)>();
+    }
+}
+fn disable_physics_inside(
+    mut commands: Commands,
+    query: Query<Entity, (With<InsideWorld>, With<RigidBody>, With<Collider>)>,
+) {
+    for entity in query {
+        commands
+            .entity(entity)
+            .insert((RigidBodyDisabled, ColliderDisabled));
     }
 }
