@@ -4,25 +4,26 @@ mod components;
 mod plugins;
 
 use plugins::{
-    camera::CameraPlugin, player::PlayerPlugin, shooting::ShootingPlugin, level::WorldPlugin, world_switching::WorldSwitchingPlugin, input::InputPlugin
+    camera::CameraPlugin, input::InputPlugin, level::WorldPlugin, player::PlayerPlugin,
+    shooting::ShootingPlugin, world_switching::WorldSwitchingPlugin,
 };
 
-use crate::{components::gamestate::{ActivityState, LocationState}, plugins::cutscene::CutscenePlugin};
+use crate::{
+    components::gamestate::{ActivityState, LocationState},
+    plugins::cutscene::CutscenePlugin,
+};
 fn main() {
     App::new()
-        .add_plugins((
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        resolution: WindowResolution::new(1920, 1080)
-                            .with_scale_factor_override(1.0),
-                        position: WindowPosition::Centered(MonitorSelection::Index(1)),
-                        ..default()
-                    }),
+        .add_plugins((DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    resolution: WindowResolution::new(1920, 1080).with_scale_factor_override(1.0),
+                    position: WindowPosition::Centered(MonitorSelection::Index(1)),
                     ..default()
-                })
-                .disable::<AudioPlugin>(),
-            ))
+                }),
+                ..default()
+            })
+            .disable::<AudioPlugin>(),))
         .init_state::<ActivityState>()
         .init_state::<LocationState>()
         .add_plugins((
@@ -38,6 +39,6 @@ fn main() {
             // Inspector
             // EguiPlugin::default(),
             // WorldInspectorPlugin::new(),
-            ))
+        ))
         .run();
 }

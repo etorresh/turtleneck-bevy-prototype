@@ -1,13 +1,15 @@
-use crate::components::{camera::CameraFocus};
+use crate::components::camera::CameraFocus;
+use crate::components::gamestate::ActivityState;
 use bevy::{post_process::bloom::Bloom, prelude::*, render::view::Hdr};
-use crate::components::gamestate::{ActivityState};
 
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_camera)
-            .add_systems(Update, focus_camera.run_if(in_state(ActivityState::Playing)));
+        app.add_systems(Startup, spawn_camera).add_systems(
+            Update,
+            focus_camera.run_if(in_state(ActivityState::Playing)),
+        );
     }
 }
 

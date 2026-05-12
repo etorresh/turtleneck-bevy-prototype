@@ -3,5 +3,5 @@ pub mod gamelayer;
 pub mod player;
 
 pub mod enemy;
-pub mod health;
 pub mod gamestate;
+pub mod health;

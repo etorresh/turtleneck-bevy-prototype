@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 
-
 pub struct InputPlugin;
 
 impl Plugin for InputPlugin {
@@ -8,7 +7,6 @@ impl Plugin for InputPlugin {
         app.init_resource::<KeyBindings>();
     }
 }
-
 
 #[derive(Resource)]
 pub struct KeyBindings {
@@ -22,4 +20,3 @@ impl Default for KeyBindings {
         }
     }
 }
-
