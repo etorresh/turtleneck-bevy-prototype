@@ -57,7 +57,8 @@ fn spawn_ui_layout(mut commands: Commands, inventory: &PlayerInventory) {
         ))
         .with_children(|root| {
             root.spawn((
-                BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
+                // BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
+                BackgroundColor((Srgba::new(0.15, 0.15, 0.15, 0.999)).into()),
                 Node {
                     width: Val::Px(700.0),
                     height: Val::Px(900.0),
