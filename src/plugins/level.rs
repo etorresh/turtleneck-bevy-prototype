@@ -146,6 +146,22 @@ fn spawn_level(
             InsideWorld,
         ))
         .observe(on_player_exit_inside);
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
+        MeshMaterial3d(materials.add(Color::linear_rgb(0.2941, 0.2156, 0.1098))),
+        Transform::from_xyz(5., 0.25, 4.0),
+        Collider::cuboid(0.5, 0.5, 0.5),
+        RigidBody::Static,
+        InsideWorld,
+    ));
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
+        MeshMaterial3d(materials.add(Color::linear_rgb(19. / 255., 143. / 255., 65. / 255.))),
+        Transform::from_xyz(-5., 0.25, 4.0),
+        Collider::cuboid(0.5, 0.5, 0.5),
+        RigidBody::Static,
+        InsideWorld,
+    ));
 }
 
 fn on_player_exit_inside(

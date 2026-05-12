@@ -10,7 +10,7 @@ use plugins::{
 
 use crate::{
     components::gamestate::{ActivityState, LocationState},
-    plugins::cutscene::CutscenePlugin,
+    plugins::{cutscene::CutscenePlugin, inventory::InventoryPlugin},
 };
 fn main() {
     App::new()
@@ -36,6 +36,7 @@ fn main() {
             WorldPlugin,
             ShootingPlugin,
             WorldSwitchingPlugin,
+            InventoryPlugin,
             // Inspector
             // EguiPlugin::default(),
             // WorldInspectorPlugin::new(),

@@ -11,12 +11,14 @@ impl Plugin for InputPlugin {
 #[derive(Resource)]
 pub struct KeyBindings {
     pub retract_to_shell: KeyCode,
+    pub open_inventory: KeyCode,
 }
 
 impl Default for KeyBindings {
     fn default() -> Self {
         Self {
-            retract_to_shell: KeyCode::Space,
+            retract_to_shell: KeyCode::ShiftLeft,
+            open_inventory: KeyCode::Tab,
         }
     }
 }
