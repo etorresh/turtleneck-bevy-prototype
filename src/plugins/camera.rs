@@ -24,7 +24,7 @@ fn spawn_camera(mut commands: Commands) {
 }
 
 fn focus_camera(
-    mut camera_transform: Single<(&mut Transform), (With<Camera>, Without<CameraFocus>)>,
+    mut camera_transform: Single<&mut Transform, (With<Camera>, Without<CameraFocus>)>,
     subject_query: Query<&Transform, With<CameraFocus>>,
 ) {
     let mut focus_points = Vec::new();

@@ -2,7 +2,7 @@ use crate::components::camera::CameraFocus;
 use crate::components::gamelayer::GameLayer;
 use crate::components::gamestate::ActivityState;
 use crate::components::player::{Player, PlayerSet};
-use avian3d::{math::Vector, prelude::*};
+use avian3d::prelude::*;
 use bevy::prelude::*;
 use core::f32;
 

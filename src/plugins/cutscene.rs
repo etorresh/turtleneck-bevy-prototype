@@ -4,7 +4,6 @@ use std::collections::VecDeque;
 
 use crate::components::gamestate::{ActivityState, LocationState};
 use crate::components::player::Player;
-use crate::plugins::cutscene;
 
 pub struct CutscenePlugin;
 

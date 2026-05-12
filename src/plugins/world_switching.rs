@@ -88,7 +88,6 @@ fn on_moved_inside(
             start: None,
             reversed: false,
         });
-        cutscene.actions.push_back(CutsceneAction::Wait(0.2));
         cutscene
             .actions
             .push_back(CutsceneAction::NextLevel(LocationState::Inside));
@@ -104,6 +103,7 @@ fn on_moved_inside(
             start: None,
             reversed: true,
         });
+        cutscene.actions.push_back(CutsceneAction::Wait(0.2));
     }
 }
 
