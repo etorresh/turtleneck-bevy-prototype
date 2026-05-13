@@ -81,29 +81,27 @@ fn on_moved_inside(
 ) {
     if *current_location == LocationState::Outside && *current_activity == ActivityState::Playing {
         outside_checkpoint.transform = Some(**player);
-        next_activity.set(ActivityState::Cutscene);
-        cutscene.actions.push_back(CutsceneAction::FadeAndZoom {
-            amount: 8.,
-            duration: 0.4,
-            start: None,
-            reversed: false,
-        });
-        cutscene
-            .actions
-            .push_back(CutsceneAction::NextLevel(LocationState::Inside));
-        cutscene
-            .actions
-            .push_back(CutsceneAction::MovePlayer(Vec3::from([0.0, 0.0, 5.0])));
-        cutscene
-            .actions
-            .push_back(CutsceneAction::MoveCameraToPlayer);
-        cutscene.actions.push_back(CutsceneAction::FadeAndZoom {
-            amount: 8.,
-            duration: 0.4,
-            start: None,
-            reversed: true,
-        });
-        cutscene.actions.push_back(CutsceneAction::Wait(0.2));
+        cutscene.add_actions(
+            &mut *next_activity,
+            vec![
+                CutsceneAction::FadeAndZoom {
+                    amount: 8.,
+                    duration: 0.4,
+                    start: None,
+                    reversed: false,
+                },
+                CutsceneAction::NextLevel(LocationState::Inside),
+                CutsceneAction::MovePlayer(Vec3::from([0.0, 0.0, 5.0])),
+                CutsceneAction::MoveCameraToPlayer,
+                CutsceneAction::FadeAndZoom {
+                    amount: 8.,
+                    duration: 0.4,
+                    start: None,
+                    reversed: true,
+                },
+                CutsceneAction::Wait(0.2),
+            ],
+        );
     }
 }
 
@@ -120,29 +118,27 @@ fn on_moved_outside(
 ) {
     if *current_location == LocationState::Inside && *current_activity == ActivityState::Playing {
         let target = outside_checkpoint.transform.take().unwrap().translation;
-        next_activity.set(ActivityState::Cutscene);
-        cutscene.actions.push_back(CutsceneAction::FadeAndZoom {
-            amount: 8.,
-            duration: 0.4,
-            start: None,
-            reversed: false,
-        });
-        cutscene
-            .actions
-            .push_back(CutsceneAction::NextLevel(LocationState::Outside));
-        cutscene
-            .actions
-            .push_back(CutsceneAction::MovePlayer(target));
-        cutscene
-            .actions
-            .push_back(CutsceneAction::MoveCameraToPlayer);
-        cutscene.actions.push_back(CutsceneAction::FadeAndZoom {
-            amount: 8.,
-            duration: 0.4,
-            start: None,
-            reversed: true,
-        });
-        cutscene.actions.push_back(CutsceneAction::Wait(0.2));
+        cutscene.add_actions(
+            &mut *next_activity,
+            vec![
+                CutsceneAction::FadeAndZoom {
+                    amount: 8.,
+                    duration: 0.4,
+                    start: None,
+                    reversed: false,
+                },
+                CutsceneAction::NextLevel(LocationState::Outside),
+                CutsceneAction::MovePlayer(target),
+                CutsceneAction::MoveCameraToPlayer,
+                CutsceneAction::FadeAndZoom {
+                    amount: 8.,
+                    duration: 0.4,
+                    start: None,
+                    reversed: true,
+                },
+                CutsceneAction::Wait(0.2),
+            ],
+        );
     }
 }
 

@@ -4,6 +4,7 @@ use std::collections::VecDeque;
 
 use crate::components::gamestate::{ActivityState, LocationState};
 use crate::components::player::Player;
+use crate::plugins::cutscene;
 
 pub struct CutscenePlugin;
 
@@ -52,9 +53,20 @@ pub enum CutsceneAction {
     FadeToBlack,
 }
 
+impl CutsceneSequence {
+    pub fn add_actions(
+        &mut self,
+        next_activity: &mut NextState<ActivityState>,
+        actions: Vec<CutsceneAction>,
+    ) {
+        next_activity.set(ActivityState::Cutscene);
+        self.actions.extend(actions);
+    }
+}
+
 #[derive(Resource, Default)]
 pub struct CutsceneSequence {
-    pub actions: VecDeque<CutsceneAction>,
+    actions: VecDeque<CutsceneAction>,
     timer: Option<Timer>,
 }
 
@@ -69,15 +81,8 @@ fn process_cutscene(
 ) {
     // https://bevy-cheatbook.github.io/pitfalls/split-borrows.html
     let cutscene_sequence = &mut *cutscene_sequence;
-    loop {
-        let action = match cutscene_sequence.actions.front_mut() {
-            Some(a) => a,
-            None => {
-                next_activity.set(ActivityState::Playing);
-                return;
-            }
-        };
 
+    while let Some(action) = cutscene_sequence.actions.front_mut() {
         match action {
             CutsceneAction::Wait(duration) => {
                 let timer = cutscene_sequence
@@ -142,12 +147,13 @@ fn process_cutscene(
         if cutscene_sequence
             .timer
             .as_ref()
-            .is_some_and(|timer| !timer.is_finished())
+            .is_none_or(|timer| timer.is_finished())
         {
-            return;
-        } else {
             cutscene_sequence.actions.pop_front();
             cutscene_sequence.timer = None;
+        } else {
+            return;
         }
     }
+    next_activity.set(ActivityState::Playing);
 }
