@@ -1,4 +1,4 @@
-# Turlteneck
+# Turtleneck
 
 Prototype game built with Bevy + Avian Physics. Custom player controller, time-stop mechanics.
 
